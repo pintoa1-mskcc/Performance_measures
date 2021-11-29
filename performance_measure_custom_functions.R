@@ -1,0 +1,249 @@
+#########################################################################
+########################### Functions ###################################
+#negate
+'%nin%' = Negate('%in%')
+
+
+mutate_cond <- function(.data, condition, ..., envir = parent.frame()) {
+  condition <- eval(substitute(condition), .data, envir)
+  .data[condition, ] <- .data[condition, ] %>% mutate(...)
+  .data
+}
+
+
+# Function to break up dataframe based on given variable
+### This function will always break down the variable based on Variable_Type then calculater statistics
+#### For general information across a variable name  look at 'all' Variant type in returned table/graphs
+
+parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysis){
+  if(variable_id == 'substitutions'){
+    ground_df <- ground_df[ground_df$Variant_Type == 'SNV',]
+    test_df <- test_df[test_df$Variant_Type == 'SNV',]
+  }
+  
+  levels_from_variable_id <- unique(c(ground_df[,variable_id],test_df[,variable_id]))
+  levels_from_variable_id <- levels_from_variable_id[!is.na(levels_from_variable_id)]
+  names(levels_from_variable_id) <- levels_from_variable_id
+  
+  variable_id_stats <- lapply(levels_from_variable_id, function(id) {
+    targeted_ground <- ground_df %>% filter(get(variable_id) == id) 
+    targeted_test <- test_df %>% filter(get(variable_id) == id) 
+    if (length(unique(c(targeted_ground$Variant_Type,targeted_test$Variant_Type))) == 1) {
+      output <-f1_stats(targeted_ground,targeted_test,type_of_analysis)
+      output[variable_id] <- id
+      output['type'] <- unique(c(targeted_ground$Variant_Type,targeted_test$Variant_Type))
+      if(variable_id == 'substitutions'){
+        output <- output %>% filter(permission == 'restrictive')
+      }
+    } else {
+      output <- calc_stats_by_variant_type(targeted_ground,targeted_test,type_of_analysis) 
+      output[,variable_id] <- id
+    } 
+    
+    return(output)
+    
+  })
+  
+  # Formatting
+  variable_id_stats <- as.data.frame(do.call(rbind,variable_id_stats))
+  return(variable_id_stats)
+}
+
+calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
+  variant_types <- c('all','SNV','indel','INS','DEL')
+  output1 <- lapply(variant_types, function(type) {
+    
+    if(type == 'all'){
+      targ_g <- ground
+      targ_t <- test
+      
+    } else if(type == 'indel'){
+      
+      indels <- c('INS','DEL')
+      targ_g <- ground %>% filter(Variant_Type %in% indels)
+      targ_t <- test %>% filter(Variant_Type %in% indels)
+      
+      
+    }else {
+      
+      targ_g <-ground %>% filter(Variant_Type == type)
+      targ_t <- test %>% filter(Variant_Type == type)
+      
+    }
+    stats_return <- f1_stats(targ_g,targ_t,type_of_analysis)
+    stats_return$type <- type
+    return(stats_return)
+    
+    
+  })
+  output1 <- as.data.frame(do.call(rbind,output1))
+  cols.num <- c(seq(2,8,1),seq(10,12,1))
+  output1[cols.num] <- lapply(output1[cols.num], as.numeric)
+  return(output1)
+}
+
+# Calculate Statistics 
+## Function will calculate recall, precision and f1 with error bars for dataframe
+## Df must which contain var_tag variable
+
+f1_stats <- function(truth_set,test_set,type_of_analysis){
+  n_samples <- length(unique(c(truth_set$Tumor_Sample_Barcode,test_set$Tumor_Sample_Barcode)))
+  stats <- do.call(rbind,lapply(c('restrictive','permissive'), function(permission){
+
+    
+    # If fillouts has been run, (detectable present), ensure opposing set is detectable at that location 
+    if(any(c(colnames(truth_set),colnames(test_set)) == 'detectable')){
+      test_set_must <- test_set[!test_set$evidence & test_set$detectable,]
+      truth_set_must <- truth_set[!truth_set$evidence & truth_set$detectable,]
+      
+      if(permission == 'restrictive'){
+        tps <- length(truth_set$var_tag[truth_set$var_tag[truth_set$evidence] %in% test_set$var_tag[test_set$evidence]])
+        
+        ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
+        fns <- truth_set$var_tag[truth_set$var_tag[truth_set$evidence]  %nin% test_set$var_tag[test_set$evidence]]
+        test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$var_tag)])
+        fns <- length(fns[which(fns %in% test_set_must$var_tag)])
+        
+        ## Remove variants from count if truth_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
+        fps <- test_set$var_tag[test_set$var_tag[test_set$evidence]  %nin% truth_set$var_tag[truth_set$evidence]]
+        truth_set_no_ev_not_detect <- length(fps[which(fps %nin% truth_set_must$var_tag)])
+        
+        fps <- length(fps[which(fps %in% truth_set_must$var_tag)])
+        
+      } else {
+        tps <- length(truth_set$TAG[truth_set$TAG[truth_set$evidence] %in% test_set$TAG[test_set$evidence]])
+        
+        ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
+        fns <- truth_set$TAG[truth_set$TAG[truth_set$evidence]  %nin% test_set$TAG[test_set$evidence]]
+        test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$TAG)])
+        fns <- length(fns[which(fns %in% test_set_must$TAG)])
+        
+        ## Remove variants from count if truth_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
+        fps <- test_set$TAG[test_set$TAG[test_set$evidence]  %nin% truth_set$TAG[truth_set$evidence]]
+        truth_set_no_ev_not_detect <- length(fps[which(fps %nin% truth_set_must$TAG)])
+        fps <- length(fps[which(fps %in% truth_set_must$TAG)])
+      }
+      
+    } else{
+      if(permission == 'restrictive'){
+        test_set_tags <- test_set$var_tag
+        truth_set_tags <- truth_set$var_tag
+      } else {
+        test_set_tags <- test_set$TAG
+        truth_set_tags <- truth_set$TAG
+      }
+      
+      
+      tps <- length(test_set_tags[test_set_tags %in% truth_set_tags])
+      fps <- length(test_set_tags[test_set_tags %nin% truth_set_tags])
+      fns <- length(truth_set_tags[truth_set_tags %nin% test_set_tags])
+      test_set_no_ev_not_detect <- 0 
+      truth_set_no_ev_not_detect <- 0 
+    }
+    total_var_count <- tps + fps + fns + truth_set_no_ev_not_detect + test_set_no_ev_not_detect
+    
+    precision <- tps / (tps + fps)
+    recall <- tps / (tps + fns)
+    f1 <- (2 * precision * recall)/(precision + recall)
+    
+    bin_conf_recall <- binom.confint(tps,(tps + fns), conf.level = 0.95, method = 'wilson')
+    bin_conf_precision <- binom.confint(tps,(tps + fps), conf.level = 0.95, method = 'wilson')
+    # If cohort level bootstrap, if not return NA
+    if (grepl('cohort',type_of_analysis)){
+      mySample =c(rep("TP", tps), rep("FN", fns), rep("FP", fps))
+      getHarm = function(){
+        g = sample(mySample, replace=TRUE)
+        Recall <- sum(g=="TP")/(sum("TP"==g) + sum("FN" == g))
+        Precision <- sum(g=="TP")/(sum("TP"==g) + sum("FP" == g))
+        (2 * (Recall * Precision)) / (Precision + Recall)
+      }
+      
+      mf_harmonic_F1 = replicate(n = 1000, getHarm())
+      
+      f1_confidence <- quantile(mf_harmonic_F1,c(0.025,0.975),na.rm = TRUE)
+      
+    } else {
+      f1_confidence <- rep(NA,2)
+    }
+    repo <- c(permission,total_var_count,n_samples,tps,fps,fns,truth_set_no_ev_not_detect,test_set_no_ev_not_detect)
+    stats_p <- c(repo,'precision',precision,bin_conf_precision$lower,bin_conf_precision$upper)
+    stats_r <- c(repo,'recall', recall,bin_conf_recall$lower,bin_conf_recall$upper)
+    stats_f <- c(repo,'f1_Score',f1,f1_confidence[1],f1_confidence[2])
+    
+    stats <- as.data.frame(rbind(stats_r,stats_p,stats_f))
+    colnames(stats) <- c('permission','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect','statistic_name','value','lower','upper')
+    col.nums <- c(seq(2,8,1),seq(10,12,1))
+    
+    stats[col.nums] <- lapply(stats[col.nums], as.numeric)
+    
+    stats
+  }))
+  
+  return(stats)
+}
+statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out){
+  ### Statistic graphs are generated across ALL variants, unless otherwise specified 
+  if(variable_id != 'type'){
+    if (any(dataframe$type == 'all')) {
+      dataframe <- dataframe %>% filter(type == 'all')
+    } 
+  } else {
+    dataframe <- dataframe %>% filter(type %nin% c('INS','DEL'))
+  }
+  
+  
+  
+  general_theme <- theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank())
+  
+  
+  col_scale <-  if(variable_id != 'substitutions')
+  {
+    scale_fill_jama()
+  } else{
+    scale_fill_manual(
+      values = c("C>T" = "red","C>G" = "black","C>A" = "skyblue", "T>A" = "gray","T>C" = "lightgreen","T>G" ="pink"),
+      labels = c("C>T", "C>G", "C>A","T>A","T>C","T>G")
+    )
+  }
+  
+  for (stat_name in unique(dataframe$statistic_name)){
+    assign(paste0('base_',stat_name), (ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=value,fill = get(variable_id))) + col_scale+ 
+                                                        scale_x_discrete(labels = unique(dataframe[variable_id]))+
+                                                    labs(x=' ', y = stat_name) + general_theme + ylim(0,1)))
+    if( graph_type == 'bar') {
+      assign(paste0('base_',stat_name), (get(paste0('base_',stat_name)) +geom_bar(stat='identity',position=position_dodge(),width=0.75)  +
+                                           geom_errorbar(aes(ymin=upper, ymax = lower),position = position_dodge(0.75), width =0.65)))
+    }else {
+      assign(paste0('base_',stat_name), (get(paste0('base_',stat_name)) +geom_boxplot()))
+    }
+
+    }
+  
+
+  base_tps <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=tps,fill = get(variable_id))) + col_scale +
+    scale_x_discrete(labels = unique(dataframe[variable_id]))+
+    labs(x=' ', y = 'True Positive Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'tps'])+1)
+  base_fps <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fps,fill = get(variable_id))) + col_scale +
+    scale_x_discrete(labels = unique(dataframe[variable_id]))+
+    labs(x=' ', y = 'False Positive Count') + general_theme+ ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fps'])+1)
+  
+  base_fns <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fns,fill = get(variable_id))) + col_scale + 
+    scale_x_discrete(labels = unique(dataframe[variable_id]))+
+    labs(x=' ', y = 'False Negatives Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
+    
+  if (graph_type == 'bar') {
+    base_tps <- base_tps + geom_bar(stat='identity',position=position_dodge(),width=0.75)  
+    base_fps  <- base_fps + geom_bar(stat='identity',position=position_dodge(),width=0.75)  
+    base_fns <- base_fns + geom_bar(stat='identity',position=position_dodge(),width=0.75)  
+  }else {
+    base_tps <- base_tps + geom_boxplot()
+    
+    base_fns <- base_fns + geom_boxplot()
+    base_fps <- base_fps + geom_boxplot()
+  }
+
+  pdf(paste0(dir,'pdfs/',out,'_',variable_id,'_',graph_type,'.pdf'),paper = 'a4r')
+    print(annotate_figure(ggarrange(base_recall,base_precision,base_f1_Score,base_tps,base_fps,base_fns, ncol=3,nrow=2,common.legend=TRUE),bottom = variable_id, top = paste0('Statistics for ',variable_id)))
+  dev.off()
+  
+}
