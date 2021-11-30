@@ -9,15 +9,15 @@ opt = commandArgs(TRUE)
 parser=ArgumentParser()
 
 parser$add_argument('-r','--ground_directory', type='character', default = getwd(), help = 'Ground OR any fillouts directory. Must be ground directory if running performance measures')
-parser$add_argument('-d','--directory',type = 'character',default = NULL, help ='Performance Measures / Final MAF Output Directory; default =[%ground_directory/top PR dir]')
+parser$add_argument('-d','--directory',type = 'character',default = NULL, help ='Performance Measures / Final MAF Output Directory; default =[top PR dir]')
 parser$add_argument("-o", "--out_prefix" , type = 'character',default = NULL, help = 'Output prefix')
 parser$add_argument('-p','--performance_measures',type = 'logical',default = FALSE, help = 'Do you wish to run performance measures on the fillouts result? Must provide a second fillouts directory and ')
 parser$add_argument('-e','--test_directory', type='character', default = NULL, help = 'Test fillouts directory, must be provided if running performance measures')
 parser$add_argument("-m", "--maf_dir" , type = 'character',default = NULL, help = 'MAF directory for MAFs used in the fillouts script. This is the -m flag in maf_fillouts.py')
 parser$add_argument("-j", "--juno" , type = 'logical',default = FALSE)
 parser$add_argument("-b","--bed_file", type = "character", default = NULL, help = "If you wish to use a bed file for targetted performance measures.")
-parser$add_argument("-s", "--script",type = 'character',default = getwd(),help = 'If running performance measures, expects Rscript to be in working directory If not, please specify.')
-
+parser$add_argument("-s", "--script",type = 'character',default = getwd(),help = 'If running performance measures, expects Rscript to be in working directory If not, please specify directory.')
+parser$add_argument('c','--called_directory',type = "character", default=NULL, help = 'Specify the directory containing the performance measures for CALLED MAF results')
 opt=parser$parse_args()
 
 
@@ -73,7 +73,6 @@ performance_measures_expected_formatting <- function(fillout_maf,opt){
   n <- colnames(fillout_maf)[grepl('^n',colnames(fillout_maf))]
   maf_with_more_info <- maf_with_more_info[, colnames(maf_with_more_info) %nin% c(t,n)]
   fillout_maf <- fillout_maf[,c('var_tag',t,n)]
-  fillout_maf$fillout_to_pr <- TRUE
   return(merge(fillout_maf,maf_with_more_info, by = 'var_tag',all.y = FALSE))
   
 }
@@ -96,7 +95,7 @@ if(opt$performance_measures) {
   test_files <- paste0(opt$test_directory,test_files)
   
   fillex_ground <- do.call(rbind,lapply(ground_files,function(file) {
-
+    write(file,stderr())
     output <- restructure_mafs(file) 
     output1 <- performance_measures_expected_formatting(output,opt)
     return(output1)
@@ -119,18 +118,20 @@ if(opt$performance_measures) {
   write.table(fillex_ground,ground_file_name,quote = FALSE, row.names = FALSE,sep = "\t")
   
   write.table(fillex_test,test_file_name,quote = FALSE, row.names = FALSE,sep = "\t")
+  bsub_command <- paste0('bsub -e ', opt$directory, ' -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -p TRUE -o fillout_', opt$out_prefix)
   
-
-  if(is.null(opt$bed_file)){
-    write(paste0('bsub -e ', opt$directory, ' -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -o fillout_', opt$out_prefix,'"'),stderr())
-    system(paste0('bsub -e ', opt$directory, ' -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -o fillout_', opt$out_prefix,'"'))
-  } else {
-    write(paste0('bsub -e ', opt$directory, ' -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -o fillout_', opt$out_prefix, ' -b ',opt$bed_file ,'"'),stderr())
-    system(paste0('bsub -e ', opt$directory, ' -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -o fillout_', opt$out_prefix, ' -b ',opt$bed_file ,'"'))
-      
+  if(!is.null(opt$called_directory)){
+    bsub_command <- paste0(bsub_command, ' -c ', opt$called_directory)
   }
   
   
+  if(is.null(opt$bed_file)){
+    bsub_command <- paste0(bsub_command,'"')
+  } else {
+    bsub_command <- paste0(bsub_command, ' -b ',opt$bed_file ,'"')
+  }
+  
+  system(bsub_command)
 } else { 
   fillex<- do.call(rbind,lapply(ground_files,restructure_mafs))
   
