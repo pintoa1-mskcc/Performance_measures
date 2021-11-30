@@ -37,8 +37,8 @@ parser$add_argument('-v','--additional_variables', type='character',  default = 
 parser$add_argument("-o", "--out_prefix", type="character", default="date()",
               help="output file name basename [default= %default]")
 parser$add_argument('-f','--fillouts', type='logical',
-                    default = FALSE
-                    ,help = 'Logical stating whether or not fillouts needs to be performed ')
+                    default = FALSE,
+                    help = 'Logical stating whether or not fillouts needs to be performed ')
 parser$add_argument('-e','--test_fillout_mapping', type='character',
                     default = NULL,
                     help = 'File containing BAM tumor/normal mapping for test set')
@@ -46,7 +46,9 @@ parser$add_argument('-r','--ground_fillout_mapping', type='character',
                     default = NULL, 
                     help = 'File containing BAM tumor/normal mapping for ground set')
 parser$add_argument('-b','--bed_file', type = 'character', default = NULL, help='BED file representing the intersection of the BED files used to generate ground and truth MAFs. If provided, tool will return a MAF for ground and test with each unique identifier and additional columns')
-
+parser$add_argument('-p', '--fillout_to_pr', type = 'logical',default = FALSE, help ='Logical stating whether or not fillouts has ALREADY  been performed')
+parser$add_argument('-c','--called_directory', type = 'character', default = NULL, help = 'Location of performance measure results on CALLED mutations (not genotyped). If provided, will generated statistics graphs for the combined results')
+parser$add_argument('-u','--called_out_prefix', type = 'character', default = NULL, help = 'Out prefix for performance measure called results If not provided, assumes the out_prefix provided is of form "fillout_%called_out_prefix%"')
 opt=parser$parse_args()
 
 
@@ -62,6 +64,12 @@ if(opt$out_prefix == "date()"){
 
 } else {
   out_prefix <- opt$out_prefix
+}
+
+if(!is.null(opt$called_directory)){
+  if(is.null(opt$called_out_prefix)){
+    opt$called_out_prefix <- str_replace(out_prefix,"fillout_","")
+  }
 }
 write(paste0("Run name: ",out_prefix),stderr())
 
@@ -258,11 +266,9 @@ if(length(unique(ground$purity)) != 0){
 }
 
 #### THIS SCRIPT UTILIZES n_variant_frequency AS AN INDICATOR THAT FILLOUTS HAS BEEN RUN, If fillouts has been run, performance measures are only run on detectable reads
-if(any(c(colnames(test),colnames(ground)) == 'fillout_to_pr')){
+if(opt$fillout_to_pr){
   test <- test %>% mutate(evidence = ifelse(t_alt_count >= 1, TRUE, FALSE))
   test <- test %>% mutate(detectable = ifelse(t_total_count >= 20, TRUE, FALSE))
-
-  
   
   ground <- ground %>% mutate(evidence = ifelse(t_alt_count >= 1, TRUE, FALSE))
   ground <- ground %>% mutate(detectable = ifelse(t_total_count >= 20, TRUE, FALSE))
@@ -337,14 +343,12 @@ if( opt$fillouts){
     write.table(sample_fillout,file=sample_maf, row.names=FALSE,quote=FALSE, sep= '\t')
     system("module load singularity")
     system("module load R/R-4.0.5")
-    test_fillout_command <- paste0('bsub -J ',job_name,'_test -e ',fillout_output_dir,'/logs/ -n 2 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', test_dir_norm,':', test_dir_norm,' -B ', test_dir_tumor,':',test_dir_tumor, 
-                                   ' /juno/work/ccs/pintoa1/wrapper_pr/develop/container/container2/container_3/container4/ngs_filters_newest.img /bin/bash -c "/usr/bin/ngs-filters/maf_fillout.py -m ', sample_maf, ' -b ',test_tumor_bam,' ', test_normal_bam,
-                                   ' -o ',fillout_results_dir,'test/test',sample,'_fillout.maf -g GRCh37 -mo"')
+    test_fillout_command <- paste0('bsub -J ',job_name,'_test -e ',fillout_output_dir,'/logs/ -n 2 -R rusage[mem=5] -We 0:59 " /juno/work/ccs/pintoa1/fillout_testing/maf_fillout.py -m ', sample_maf, ' -b ',test_tumor_bam,' ', test_normal_bam,
+                                   ' -o ',fillout_results_dir,'test/test',sample,'_fillout.maf -mo"')
     
   
-    ground_fillout_command <- paste0('bsub -J ',job_name,'_ground -e ',fillout_output_dir,'/logs/ -n 2 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', ground_dir_norm,':', ground_dir_norm,' -B ', ground_dir_tumor,':',ground_dir_tumor, 
-                                     ' /juno/work/ccs/pintoa1/wrapper_pr/develop/container/container2/container_3/container4/ngs_filters_newest.img /bin/bash -c " /usr/bin/ngs-filters/maf_fillout.py -m ', sample_maf, ' -b ',ground_tumor_bam,' ', ground_normal_bam,
-                                     ' -o ',fillout_results_dir,'ground/ground_',sample,'_fillout.maf -g GRCh37 -mo"')
+    ground_fillout_command <- paste0('bsub -J ',job_name,'_ground -e ',fillout_output_dir,'/logs/ -n 2 -R rusage[mem=5] -We 0:59  " /juno/work/ccs/pintoa1/fillout_testing/maf_fillout.py -m ', sample_maf, ' -b ',ground_tumor_bam,' ', ground_normal_bam,
+                                     ' -o ',fillout_results_dir,'ground/ground_',sample,'_fillout.maf -mo"')
   write(ground_fillout_command,stderr())
   system(test_fillout_command)
      
@@ -392,6 +396,8 @@ if(!is.null(opt$bed_file)){
   cols.num <- c(seq(2,6,1),seq(8,10,1))
   sample_level_df[cols.num] <- lapply(sample_level_df[cols.num], as.numeric)
   sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+  
+  
   write.table(sample_level_df,paste0(directory,out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- sample_level_df %>% filter(permission == 'restrictive')
   statistics_graphs(df1,'on_target','boxplot',directory,out_prefix)
@@ -407,6 +413,10 @@ if(!is.null(opt$bed_file)){
 overview_df <- calc_stats_by_variant_type(ground,test,'cohort')
 overview_df <- overview_df[,c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
 write.table(overview_df,paste0(directory,out_prefix,'_overview_all_variants_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
+if(!is.null(opt$called_directory)){
+  c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_overview_all_variants_performance_measures.txt'),header = TRUE)
+  statistics_graphs(overview_df[overview_df$permission == 'restrictive',],'type','bar',directory,paste0('combined_',out_prefix),c_df[c_df$permission=='restrictive',])
+} 
 statistics_graphs(overview_df[overview_df$permission == 'restrictive',],'type','bar',directory,out_prefix)
 
 
@@ -419,7 +429,14 @@ variable_parsing_and_graph <- function(variable) {
   write.table(df,paste0(directory,out_prefix,'_',variable,'_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   if(variable %nin% binned_variables){
     df1 <- df %>% filter(permission == 'restrictive')
-    statistics_graphs(df1,variable,'bar',directory,out_prefix)
+    if(!is.null(opt$called_directory)){
+   
+      
+      
+    } else {
+      statistics_graphs(df1,variable,'bar',directory,out_prefix)
+    }
+    
     return(NULL)
   } else{
     assign(paste0(variable,'_df'),df)
@@ -465,7 +482,7 @@ na_variant <- ggplot(purity_nas[purity_nas$Variable_ID == 'vaf',], aes(x = purit
 
 na_sample_count <- ggplot(purity_nas,aes(x = purity_bin, y = n_samples)) + geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() +
   theme(axis.title.x = element_blank(),legend.position = "top",legend.background=element_blank(),legend.title=element_blank()) +
-  scale_x_discrete(labels = levels(purity_nas[,'purity_bin']),drop=FALSE) + annotate('text', label='Purity', x=-Inf, y=Inf, hjust=0, vjust=1) 
+  scale_x_discrete(labels = levels(purity_nas[,'purity_bin']),drop=FALSE) + annotate('text', label='Purity', x=-Inf, y=Inf, hjust=0, vjust=1) + ylab("N Samples")
 na_recall_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'recall',] , aes(x = purity_bin, y = value,group = Variable_ID, color = Variable_ID)) + geom_point()  +  scale_color_jama() +
   geom_errorbar(aes(ymin =lower, ymax = upper, width = 0.1)) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
   scale_x_discrete(labels = levels(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Recall')
@@ -474,11 +491,12 @@ na_precision_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'precision',]
   scale_x_discrete(labels = unique(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Precision') + xlab("Frequency")
 
 
-ggarrange(ggarrange(na_variant,na_sample_count,na_recall_bin,na_precision_bin, ncol= 1, align ='hv',common.legend = TRUE, legend = "bottom"),ggarrange(vaf_mut_count,pur_sample_count,recall_bin,precision_bin, ncol = 1,common.legend = TRUE, legend = "bottom",align = "hv"),ncol = 2,align = "hv", widths = c(0.2,1.0),common.legend = TRUE, legend = "bottom")
 
 
 
 pdf(paste0(directory,'pdfs/',out_prefix,'_binned_vars','.pdf'))
+ggarrange(ggarrange(na_variant,na_sample_count,na_recall_bin,na_precision_bin, ncol= 1, align ='hv',common.legend = TRUE, legend = "bottom"),ggarrange(vaf_mut_count,pur_sample_count,recall_bin,precision_bin, ncol = 1,common.legend = TRUE, legend = "bottom",align = "hv"),ncol = 2,align = "hv", widths = c(0.13,1.0),common.legend = TRUE, legend = "bottom")
+
     print(ggarrange(vaf_mut_count,pur_sample_count,recall_bin,precision_bin, ncol = 1,common.legend = TRUE, legend = "bottom",align = "hv"))
 
 dev.off()
@@ -497,7 +515,7 @@ sample_level_raw <- lapply(all_samples, function(sample){
 
 sample_level_raw <- do.call(rbind,sample_level_raw)
 cols.nums <- c(seq(2,8,1),seq(10,12,1))
-sample_level_raw[cols.num] <- lapply(sample_level_raw[cols.num], as.numeric)
+sample_level_raw[cols.nums] <- lapply(sample_level_raw[cols.nums], as.numeric)
 sample_level_raw <- sample_level_raw[,c('permission','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
 
 write.table(sample_level_raw,paste0(directory,out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
@@ -520,7 +538,7 @@ variable_parsing_and_graph_sample <- function(variable) {
   
   sample_level_df <- do.call(rbind,sample_level_df)
   cols.nums <- c(seq(2,8,1),seq(10,12,1))
-  sample_level_df[cols.num] <- lapply(sample_level_df[cols.num], as.numeric)
+  sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
   sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
 
   write.table(sample_level_df,paste0(directory,out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
@@ -583,9 +601,11 @@ if (opt$fillouts){
   test_dir <- paste0(fillout_results_dir,'test/')
   rscript_dir <- getwd()
   if(is.null(opt$bed_file)){
-    system(paste0('bsub -J  collect_fillouts_results -e ',fillout_output_dir,' -n 2 -R rusage[mem=5] -We 0:59 "Rscript /fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ))
+    write(paste0('bsub -J  collect_fillouts_results -e ',fillout_output_dir,' -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ),stderr())
+    
+    system(paste0('bsub -J  collect_fillouts_results -e ',fillout_output_dir,' -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ))
   } else{
-    system(paste0('bsub -J  collect_fillouts_results -e ',fillout_output_dir,' -n 2 -R rusage[mem=5] -We 0:59 "Rscript /fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -b ',opt$bed_file ,' -j TRUE"' ))
+    system(paste0('bsub -J  collect_fillouts_results -e ',fillout_output_dir,' -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -b ',opt$bed_file ,' -j TRUE"' ))
     
   }
   
@@ -595,7 +615,7 @@ if (opt$fillouts){
     ground <- rbind(ground,ground_off)
     test <- rbind(test,test_off)
   }
-  if(any(c(colnames(test),colnames(ground)) == 'fillout_to_pr')){
+  if(opt$fillout_to_pr){
   
     
     test <- test %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$detectable] , TRUE, FALSE))
@@ -614,8 +634,10 @@ if (opt$fillouts){
   ground <- as.data.frame(unnest(ground, substitutions))
   test <- as.data.frame(unnest(test, substitutions))
   
+  
   write.table(ground,paste0(directory,out_prefix,'_ground_PR_labeled.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   write.table(test,paste0(directory,out_prefix,'_test_PR_labeled.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   
   
 }
+

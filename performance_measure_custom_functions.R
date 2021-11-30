@@ -181,56 +181,103 @@ f1_stats <- function(truth_set,test_set,type_of_analysis){
   
   return(stats)
 }
-statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out){
+statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out,c_dataframe = NULL){
   ### Statistic graphs are generated across ALL variants, unless otherwise specified 
+  if(!is.null(c_dataframe)){
+    c_dataframe$Genotyped <- 'Called'
+    dataframe$Genotyped <- 'Genotyped'
+  } else{
+    dataframe$Genotyped <- NA
+  }
+  
   if(variable_id != 'type'){
     if (any(dataframe$type == 'all')) {
       dataframe <- dataframe %>% filter(type == 'all')
+      if(!is.null(c_dataframe)){
+        c_dataframe <- c_dataframe %>% filter(type == 'all')
+      }
     } 
   } else {
     dataframe <- dataframe %>% filter(type %nin% c('INS','DEL'))
+    if(!is.null(c_dataframe)){
+      c_dataframe <- c_dataframe %>% filter(type %nin% c('INS','DEL'))
+    }
   }
   
   
   
   general_theme <- theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank())
   
+  if(is.null(c_dataframe)){
+    col_scale <-  if(variable_id != 'substitutions')
+    {
+      scale_fill_jama()
+    } else{
+      scale_fill_manual(
+        values = c("C>T" = "red","C>G" = "black","C>A" = "skyblue", "T>A" = "gray","T>C" = "lightgreen","T>G" ="pink"),
+        labels = c("C>T", "C>G", "C>A","T>A","T>C","T>G")
+      )
+    }
+    
+    for (stat_name in unique(dataframe$statistic_name)){
+      assign(paste0('base_',stat_name), (ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=value,fill = get(variable_id))) + col_scale+ 
+                                                          scale_x_discrete(labels = unique(dataframe[variable_id]))+
+                                                      labs(x=' ', y = stat_name) + general_theme + ylim(0,1)))
+      if( graph_type == 'bar') {
+        assign(paste0('base_',stat_name), (get(paste0('base_',stat_name)) +geom_bar(stat='identity',position=position_dodge(),width=0.75)  +
+                                             geom_errorbar(aes(ymin=upper, ymax = lower),position = position_dodge(0.75), width =0.65)))
+      }else {
+        assign(paste0('base_',stat_name), (get(paste0('base_',stat_name)) +geom_boxplot()))
+      }
   
-  col_scale <-  if(variable_id != 'substitutions')
-  {
-    scale_fill_jama()
+      }
+    
+  
+    base_tps <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=tps,fill = get(variable_id))) + col_scale +
+      scale_x_discrete(labels = unique(dataframe[variable_id]))+
+      labs(x=' ', y = 'True Positive Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'tps'])+1)
+    base_fps <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fps,fill = get(variable_id))) + col_scale +
+      scale_x_discrete(labels = unique(dataframe[variable_id]))+
+      labs(x=' ', y = 'False Positive Count') + general_theme+ ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fps'])+1)
+    
+    base_fns <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fns,fill = get(variable_id))) + col_scale + 
+      scale_x_discrete(labels = unique(dataframe[variable_id]))+
+      labs(x=' ', y = 'False Negatives Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
   } else{
-    scale_fill_manual(
-      values = c("C>T" = "red","C>G" = "black","C>A" = "skyblue", "T>A" = "gray","T>C" = "lightgreen","T>G" ="pink"),
-      labels = c("C>T", "C>G", "C>A","T>A","T>C","T>G")
-    )
+    
+    col_scale <- scale_fill_jama()
+    
+    
+    for (stat_name in unique(dataframe$statistic_name)){
+      assign(paste0('base_',stat_name), (ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=value,fill = Genotyped)) + col_scale+ 
+                                           scale_x_discrete(labels = unique(dataframe[variable_id]))+
+                                           labs(x=' ', y = stat_name) + general_theme + ylim(0,1)))
+      if( graph_type == 'bar') {
+        assign(paste0('base_',stat_name), (get(paste0('base_',stat_name)) +geom_bar(stat='identity',position=position_dodge(),width=0.75)  +
+                                             geom_errorbar(aes(ymin=upper, ymax = lower, group = Genotyped),position = position_dodge(0.75), width =0.65)))
+      }else {
+        assign(paste0('base_',stat_name), (get(paste0('base_',stat_name)) +geom_boxplot()))
+      }
+      
+    }
+    
+    
+    base_tps <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=tps,fill = Genotyped)) + col_scale +
+      scale_x_discrete(labels = unique(dataframe[variable_id]))+
+      labs(x=' ', y = 'True Positive Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'tps'])+1)
+    base_fps <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fps,fill = Genotyped)) + col_scale +
+      scale_x_discrete(labels = unique(dataframe[variable_id]))+
+      labs(x=' ', y = 'False Positive Count') + general_theme+ ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fps'])+1)
+    
+    base_fns <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fns,fill = Genotyped)) + col_scale + 
+      scale_x_discrete(labels = unique(dataframe[variable_id]))+
+      labs(x=' ', y = 'False Negatives Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
   }
   
-  for (stat_name in unique(dataframe$statistic_name)){
-    assign(paste0('base_',stat_name), (ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=value,fill = get(variable_id))) + col_scale+ 
-                                                        scale_x_discrete(labels = unique(dataframe[variable_id]))+
-                                                    labs(x=' ', y = stat_name) + general_theme + ylim(0,1)))
-    if( graph_type == 'bar') {
-      assign(paste0('base_',stat_name), (get(paste0('base_',stat_name)) +geom_bar(stat='identity',position=position_dodge(),width=0.75)  +
-                                           geom_errorbar(aes(ymin=upper, ymax = lower),position = position_dodge(0.75), width =0.65)))
-    }else {
-      assign(paste0('base_',stat_name), (get(paste0('base_',stat_name)) +geom_boxplot()))
-    }
-
-    }
   
-
-  base_tps <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=tps,fill = get(variable_id))) + col_scale +
-    scale_x_discrete(labels = unique(dataframe[variable_id]))+
-    labs(x=' ', y = 'True Positive Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'tps'])+1)
-  base_fps <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fps,fill = get(variable_id))) + col_scale +
-    scale_x_discrete(labels = unique(dataframe[variable_id]))+
-    labs(x=' ', y = 'False Positive Count') + general_theme+ ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fps'])+1)
   
-  base_fns <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fns,fill = get(variable_id))) + col_scale + 
-    scale_x_discrete(labels = unique(dataframe[variable_id]))+
-    labs(x=' ', y = 'False Negatives Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
-    
+  
+  
   if (graph_type == 'bar') {
     base_tps <- base_tps + geom_bar(stat='identity',position=position_dodge(),width=0.75)  
     base_fps  <- base_fps + geom_bar(stat='identity',position=position_dodge(),width=0.75)  
