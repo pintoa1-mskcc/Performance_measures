@@ -186,22 +186,15 @@ statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out,c_datafra
   if(!is.null(c_dataframe)){
     c_dataframe$Genotyped <- 'Called'
     dataframe$Genotyped <- 'Genotyped'
-  } else{
-    dataframe$Genotyped <- NA
+    dataframe <- rbind(dataframe,c_dataframe)
   }
   
   if(variable_id != 'type'){
     if (any(dataframe$type == 'all')) {
       dataframe <- dataframe %>% filter(type == 'all')
-      if(!is.null(c_dataframe)){
-        c_dataframe <- c_dataframe %>% filter(type == 'all')
-      }
     } 
   } else {
     dataframe <- dataframe %>% filter(type %nin% c('INS','DEL'))
-    if(!is.null(c_dataframe)){
-      c_dataframe <- c_dataframe %>% filter(type %nin% c('INS','DEL'))
-    }
   }
   
   

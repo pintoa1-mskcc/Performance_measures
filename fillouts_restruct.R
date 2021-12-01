@@ -17,7 +17,7 @@ parser$add_argument("-m", "--maf_dir" , type = 'character',default = NULL, help 
 parser$add_argument("-j", "--juno" , type = 'logical',default = FALSE)
 parser$add_argument("-b","--bed_file", type = "character", default = NULL, help = "If you wish to use a bed file for targetted performance measures.")
 parser$add_argument("-s", "--script",type = 'character',default = getwd(),help = 'If running performance measures, expects Rscript to be in working directory If not, please specify directory.')
-parser$add_argument('c','--called_directory',type = "character", default=NULL, help = 'Specify the directory containing the performance measures for CALLED MAF results')
+parser$add_argument('-c','--called_directory',type = "character", default=NULL, help = 'Specify the directory containing the performance measures for CALLED MAF results')
 opt=parser$parse_args()
 
 
@@ -118,7 +118,7 @@ if(opt$performance_measures) {
   write.table(fillex_ground,ground_file_name,quote = FALSE, row.names = FALSE,sep = "\t")
   
   write.table(fillex_test,test_file_name,quote = FALSE, row.names = FALSE,sep = "\t")
-  bsub_command <- paste0('bsub -e ', opt$directory, ' -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -p TRUE -o fillout_', opt$out_prefix)
+  bsub_command <- paste0('bsub -e ', opt$directory, ' -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory, ' -c ', opt$directory,' -m TRUE -p TRUE -o fillout_', opt$out_prefix)
   
   if(!is.null(opt$called_directory)){
     bsub_command <- paste0(bsub_command, ' -c ', opt$called_directory)
