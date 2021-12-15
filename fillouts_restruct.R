@@ -63,7 +63,8 @@ restructure_mafs <- function(x) {
 
 performance_measures_expected_formatting <- function(fillout_maf,opt){
   fillout_maf$Tumor_Seq_Allele2 <- fillout_maf$Tumor_Seq_Allele1
-  fillout_maf$t_var_freq <- fillout_maf$t_variant_frequency
+  fillout_maf$genotyped_variant_freq <- fillout_maf$t_variant_frequency
+  fillout_maf$t_variant_frequency <- NULL
   sample_to_find <- unique(fillout_maf$Tumor_Sample_Barcode)
   target_mafs <- list.files(opt$maf_dir)
   target <- target_mafs[grepl(unique(fillout_maf$Tumor_Sample_Barcode),target_mafs)]
@@ -72,7 +73,7 @@ performance_measures_expected_formatting <- function(fillout_maf,opt){
   t <- colnames(fillout_maf)[grepl('^t',colnames(fillout_maf))]
   n <- colnames(fillout_maf)[grepl('^n',colnames(fillout_maf))]
   maf_with_more_info <- maf_with_more_info[, colnames(maf_with_more_info) %nin% c(t,n)]
-  fillout_maf <- fillout_maf[,c('var_tag',t,n)]
+  fillout_maf <- fillout_maf[,c('var_tag',t,n,'genotyped_variant_freq')]
   return(merge(fillout_maf,maf_with_more_info, by = 'var_tag',all.y = FALSE))
   
 }
@@ -110,18 +111,18 @@ if(opt$performance_measures) {
   
   
   
-  test_file_name <- format_output_name(opt,'test_mut_somatic_fillout.maf')
+  test_file_name <- format_output_name(opt,'genotyped_test.maf')
 
-  ground_file_name <- format_output_name(opt,'ground_mut_somatic_fillout.maf')
+  ground_file_name <- format_output_name(opt,'genotyped_ground.maf')
   
   
   write.table(fillex_ground,ground_file_name,quote = FALSE, row.names = FALSE,sep = "\t")
   
   write.table(fillex_test,test_file_name,quote = FALSE, row.names = FALSE,sep = "\t")
-  bsub_command <- paste0('bsub -e ', opt$directory, ' -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory, ' -c ', opt$directory,' -m TRUE -p TRUE -o fillout_', opt$out_prefix)
+  bsub_command <- paste0('bsub -e ', opt$directory, 'performance_measure_fillout.err -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory, ' -c ', opt$directory,' -m TRUE -p TRUE -o fillout_', opt$out_prefix)
   
   if(!is.null(opt$called_directory)){
-    bsub_command <- paste0(bsub_command, ' -c ', opt$called_directory)
+    bsub_command <- paste0(bsub_command, ' -c ', opt$called_directory, ' -u ', opt$out_prefix)
   }
   
   
