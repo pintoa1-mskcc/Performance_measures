@@ -357,6 +357,8 @@ if(opt$fillouts){
 
   fillout_commands <-  function(sample) {
     sample_fillout <- fillout_maf[fillout_maf$Tumor_Sample_Barcode == sample,]
+
+    
     test_tumor_bam <- fillout_mapping_test$tumor_bam[fillout_mapping_test$tumor_id == sample]
     test_normal_bam <- fillout_mapping_test$normal_bam[fillout_mapping_test$tumor_id == sample]
     test_dir_norm <- dirname(fillout_mapping_test$normal_bam[fillout_mapping_test$tumor_id == sample])
@@ -664,13 +666,13 @@ if(!is.null(opt$called_directory)){
   c_df$Genotyped <- 'Called'
   sample_level_raw$Genotyped <- 'Genotyped'
   write(colnames(sample_level_raw),stderr())
-  sample_level_raw <- rbind(sample_level_raw,c_df)
+  df1 <- rbind(sample_level_raw,c_df)
 }
 if(!opt$fillouts){
-  statistics_graphs(sample_level_raw,'type','boxplot',directory,out_prefix,opt)
+  statistics_graphs(df1,'type','boxplot',directory,out_prefix,opt)
   
   if(opt$multiqc){
-    restruct_for_multiqc(sample_level_raw,'type','sample',opt$mq_dir)
+    restruct_for_multiqc(df1,'type','sample',opt$mq_dir)
   }
 }
 
@@ -752,7 +754,7 @@ if(opt$multiqc){
 }
 write('Number 5.8 ',stderr())
 
-  pdf(paste0(directory,'images/',out_prefix,'_precision_recall_plot.pdf'))
+pdf(paste0(directory,'images/',out_prefix,'_precision_recall_plot.pdf'))
 
   ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
     theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
