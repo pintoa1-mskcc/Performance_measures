@@ -12,6 +12,8 @@ suppressPackageStartupMessages({library(dplyr)
   library(argparse) 
   library(doParallel)
   library(cowplot)
+  library(grid)
+  library(gridExtra)
   })
 library(bedr)
 ############################################
@@ -30,17 +32,17 @@ opt = commandArgs(TRUE)
 parser=ArgumentParser()
 parser$add_argument("-g", "--ground", type='character', default=NULL,
                     help="ground truth MAF file ")
+parser$add_argument('-n','--name_ground', type = 'character', default = NULL, help='optional, name of ground cohort')
 parser$add_argument("-t", "--test", type='character',  default=NULL,
                     help="test MAF file ")
+parser$add_argument('-s','--name_test', type = 'character', default = NULL, help='optional, name of test cohort')
 parser$add_argument('-d','--directory', type='character', default = getwd(),
                     help='output directory [default = current working directory ]')
 parser$add_argument('-v','--additional_variables', type='character',  default = NULL,
                     help= 'additional columns from MAFs which you would like to run recall and precision. This is a single value or a comma separated list if there is more than one')
 parser$add_argument("-o", "--out_prefix", type="character", default="date()",
               help="output file name basename [default= %default]")
-parser$add_argument('-f','--fillouts', type='logical',
-                    default = FALSE,
-                    help = 'Logical stating whether or not fillouts needs to be performed ')
+parser$add_argument('-f','--fillouts', type='logical', default = FALSE, action= "store",help = 'RUN fillouts')
 parser$add_argument('-e','--test_fillout_mapping', type='character',
                     default = NULL,
                     help = 'File containing BAM tumor/normal mapping for test set')
@@ -48,13 +50,22 @@ parser$add_argument('-r','--ground_fillout_mapping', type='character',
                     default = NULL, 
                     help = 'File containing BAM tumor/normal mapping for ground set')
 parser$add_argument('-b','--bed_file', type = 'character', default = NULL, help='BED file representing the intersection of the BED files used to generate ground and truth MAFs. If provided, tool will return a MAF for ground and test with each unique identifier and additional columns')
-parser$add_argument('-p', '--fillout_to_pr', type = 'logical',default = FALSE, help ='Logical stating whether or not fillouts has ALREADY  been performed')
-parser$add_argument('-c','--called_directory', type = 'character', default = NULL, help = 'Location of performance measure results on CALLED mutations (not genotyped). If provided, will generated statistics graphs for the combined results')
+parser$add_argument('-p', '--fillout_to_pr', type = 'logical',default = FALSE, help ='Logical stating whether or not fillouts has ALREADY  been performed.')
+parser$add_argument('-c','--called_directory', type = 'character', default = NULL, help = 'Location of performance measure results on CALLED mutations (not genotyped). If provided, will generated statistics graphs for the combined results. Must be provided if using fillout_to_pr')
 parser$add_argument('-u','--called_out_prefix', type = 'character', default = NULL, help = 'Out prefix for performance measure called results If not provided, assumes the out_prefix provided is of form "fillout_%called_out_prefix%"')
 parser$add_argument('-m','--multiqc', type = 'logical', default = FALSE, help = 'Run multiqc after analysis. If you are running fillouts through this script, multiqc will automatically be run once genotyped analysis is complete.')
 
 opt=parser$parse_args()
 
+if(opt$fillout_to_pr && opt$fillouts){
+  opt$fillout_to_pr <- FALSE
+}
+write(opt$fillouts, stderr())
+if(opt$fillouts){
+  if(is.null(opt$ground_fillout_mapping) || is.null(opt$test_fillout_mapping)){
+    stop("Indicated running fillouts, but did not provided mapping files")
+  }
+}
 
 test <- fread(opt$test,data.table = FALSE)
 ground <- fread(opt$ground,data.table = FALSE)
@@ -84,9 +95,15 @@ write(paste0("Test file: ", opt$test),stderr())
 
 directory <- paste0(opt$directory,'/')
 dir.create(directory)
-dir.create(paste0(directory,'pdfs/'))
+dir.create(paste0(directory,'images/'))
 write(paste0("Output directory: ",directory),stderr())
 
+if(is.null(opt$name_ground)){
+  opt$name_ground <- 'ground'
+}
+if(is.null(opt$name_test)){
+  opt$name_test <- 'test'
+}
 if(!is.null(opt$additional_variables) ) {
   if(grepl(',',opt$additional_variables) ){
   additional_variables <- str_split(opt$additional_variables,',')
@@ -103,7 +120,17 @@ if(!is.null(opt$additional_variables) ) {
   additional_variables <- NULL
 }
 
+if(opt$multiqc && !opt$fillouts){
+  opt$mq_dir <- paste0(directory,'multiqc_reports/')
+  dir.create(opt$mq_dir)
 
+}
+
+if(opt$fillout_to_pr){
+  if(is.null(opt$called_directory)){
+    stop("If expecting combined results (fillout_to_pr == TRUE), must provide original directory.")
+  }
+}
 
 ############################################
 
@@ -123,12 +150,13 @@ if(any(c(missing_in_test,missing_in_ground))) {
   names_m_i_g <-unique(test$Tumor_Sample_Barcode)[missing_in_ground]
   names_m_i_t <- unique(test$Tumor_Sample_Barcode)[missing_in_test]
   if(length(names_m_i_g) > 0 ) {
-    names(names_m_i_g) <- 'Missing_In_Ground_Samples' 
+    names(names_m_i_g) <- paste0('Missing_In_',opt$name_ground,'_Samples' )
     }
   if(length(names_m_i_t) > 0 ) {
-    names(names_m_i_t) <- 'Missing_In_Test_Samples' 
+    names(names_m_i_t) <- paste0('Missing_In_',opt$name_test,'Test_Samples')
   }
   warning_return_1 <- c(names_m_i_g,names_m_i_t)
+  names(warning_return_1) <- paste0('Samples missing in ', opt$name_ground,' or ',opt$name_test,' MAF')
   write.table(warning_return_1,file=paste0(directory,'000.txt'),quote = FALSE)
 }
 
@@ -149,7 +177,7 @@ if(!is.null(opt$bed)){
                    check.zero.based = FALSE,
                    check.valid = FALSE,
                    check.sort = FALSE,
-                   check.merge = FALSE,outputFile =paste0(directory,'/test.bed'),verbose = TRUE))
+                   check.merge = FALSE,outputFile =paste0(directory,'/',opt$out_prefix,'_',opt$name_test,'.bed'),verbose = TRUE))
   bed_test <- fread(paste0(directory,'/test.bed'),data.table = FALSE)
   
   ground_bed <- ground[,c('Chromosome','Start_Position','End_Position','bed_tag')] 
@@ -295,7 +323,7 @@ ground[is.na(ground$purity_bin),'purity_bin'] <- 'N/A'
 ############################################
 
 ######### IF FILLOUTS RETURN FILLOUTS MAFS ############################
-if( opt$fillouts){
+if(opt$fillouts){
 
   fillout_maf <- rbind(ground,test)
   fillout_maf <- fillout_maf[!duplicated(fillout_maf$var_tag),]
@@ -321,7 +349,7 @@ if( opt$fillouts){
   dir.create(fillout_output_dir)
   dir.create(fillout_combined_mafs)
   dir.create(fillout_results_dir)
-  dir.create(paste0(fillout_results_dir,'logs/'))
+  dir.create(paste0(fillout_output_dir,'logs/'))
   
   dir.create(paste0(fillout_results_dir,'ground/'))
   dir.create(paste0(fillout_results_dir,'test/'))
@@ -347,13 +375,14 @@ if( opt$fillouts){
     write.table(sample_fillout,file=sample_maf, row.names=FALSE,quote=FALSE, sep= '\t')
     system("module load singularity")
     system("module load R/R-4.0.5")
-    test_fillout_command <- paste0('bsub -J ',job_name,'_test -e ',fillout_output_dir,'/logs/ -n 2 -R rusage[mem=5] -We 0:59 " /juno/work/ccs/pintoa1/fillout_testing/maf_fillout.py -m ', sample_maf, ' -b ',test_tumor_bam,' ', test_normal_bam,
+    test_fillout_command <- paste0('bsub -J ',job_name,'_test -e ',fillout_output_dir,'logs/',job_name,'_test.err -n 2 -R rusage[mem=5] -We 0:59 " /juno/work/ccs/pintoa1/fillout_testing/maf_fillout.py -m ', sample_maf, ' -b ',test_tumor_bam,' ', test_normal_bam,
                                    ' -o ',fillout_results_dir,'test/test',sample,'_fillout.maf -mo"')
     
   
-    ground_fillout_command <- paste0('bsub -J ',job_name,'_ground -e ',fillout_output_dir,'/logs/ -n 2 -R rusage[mem=5] -We 0:59  " /juno/work/ccs/pintoa1/fillout_testing/maf_fillout.py -m ', sample_maf, ' -b ',ground_tumor_bam,' ', ground_normal_bam,
+    ground_fillout_command <- paste0('bsub -J ',job_name,'_ground -e ',fillout_output_dir,'/logs/',job_name,'_ground.err -n 2 -R rusage[mem=5] -We 0:59  " /juno/work/ccs/pintoa1/fillout_testing/maf_fillout.py -m ', sample_maf, ' -b ',ground_tumor_bam,' ', ground_normal_bam,
                                      ' -o ',fillout_results_dir,'ground/ground_',sample,'_fillout.maf -mo"')
-      system(test_fillout_command)
+    write(test_fillout_command,stderr())  
+    system(test_fillout_command)
      
       system(ground_fillout_command)
    
@@ -378,12 +407,19 @@ binned_variables <- variables_to_parse[grepl('bin',variables_to_parse)]
 
 if(!is.null(opt$bed_file)){
   df <- parse_dataframe_on_var(ground,test,'on_target','cohort')
-  df <- df[,c('permission','type','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+  df <- df[,c('permission','type','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
   
   write.table(df,paste0(directory,out_prefix,'_','on_target','_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- df %>% filter(permission == 'restrictive')
-  statistics_graphs(df1,'on_target','bar',directory,out_prefix)
+  if(!opt$fillouts){
+    statistics_graphs(df1,'on_target','bar',directory,out_prefix,opt)
   
+   if(opt$multiqc){
+      restruct_for_multiqc(df1,'on_target','cohort',opt$mq_dir)
+    }
+  
+  } +
+    -
   sample_level_df <- lapply(all_samples, function(sample){
     sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
     sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
@@ -398,14 +434,17 @@ if(!is.null(opt$bed_file)){
   sample_level_df <- do.call(rbind,sample_level_df)
   cols.num <- c(seq(2,6,1),seq(8,10,1))
   sample_level_df[cols.num] <- lapply(sample_level_df[cols.num], as.numeric)
-  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
   
   
   write.table(sample_level_df,paste0(directory,out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- sample_level_df %>% filter(permission == 'restrictive')
-  statistics_graphs(df1,'on_target','boxplot',directory,out_prefix)
-  
-  
+  if(!opt$fillouts){
+    statistics_graphs(df1,'on_target','boxplot',directory,out_prefix,opt)
+    if(opt$multiqc){
+      restruct_for_multiqc(df1,'on_target','sample',opt$mq_dir)
+    }
+  } 
   ### ONLY PARSING THE ON TARGET VALUES FROM HERE ON
   ground_off <- ground %>% filter(on_target == FALSE)
   ground <- ground %>% filter(on_target == TRUE)
@@ -414,33 +453,67 @@ if(!is.null(opt$bed_file)){
 }
 
 overview_df <- calc_stats_by_variant_type(ground,test,'cohort')
-overview_df <- overview_df[,c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+overview_df <- overview_df[,c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
 write.table(overview_df,paste0(directory,out_prefix,'_overview_all_variants_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
-if(!is.null(opt$called_directory)){
-  write(paste0(opt$called_directory,opt$called_out_prefix,'_overview_all_variants_performance_measures.txt'), stderr())
-  c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_overview_all_variants_performance_measures.txt'),header = TRUE)
-  statistics_graphs(overview_df[overview_df$permission == 'restrictive',],'type','bar',directory,paste0('combined_',out_prefix),c_df[c_df$permission=='restrictive',])
-}  else {
-  statistics_graphs(overview_df[overview_df$permission == 'restrictive',],'type','bar',directory,out_prefix)
-}
+overview_df <- overview_df[overview_df$permission == 'restrictive',]
 
+
+if(opt$fillout_to_pr){
+  c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_overview_all_variants_performance_measures.txt'),header = TRUE)
+  c_df <- c_df[c_df$permission=='restrictive',]
+  
+  c_df$Genotyped <- 'Called'
+  overview_df$Genotyped <- 'Genotyped'
+  
+  overview_df <- rbind(overview_df,c_df)
+
+  
+}  
+if(!opt$fillouts){
+  statistics_graphs(overview_df,'type','bar',directory,out_prefix,opt)
+  
+  if(opt$multiqc){
+    restruct_for_multiqc(overview_df,'type','cohort',opt$mq_dir)
+  }
+}
 
 
 variable_parsing_and_graph <- function(variable) {
   df <- parse_dataframe_on_var(ground,test,variable,'cohort')
-  df <- df[,c('permission','type',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+  df <- df[,c('permission','type',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
   
   write.table(df,paste0(directory,out_prefix,'_',variable,'_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
+  
+  
+  
   if(variable %nin% binned_variables){
     df1 <- df %>% filter(permission == 'restrictive')
-    if(!is.null(opt$called_directory)){
+    if(variable != 'type'){
+      if (any(df1$type == 'all')) {
+        df1 <- df1 %>% filter(type == 'all')
+      } 
+    } 
+    if(opt$fillout_to_pr){
       c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_',variable,'_cohort_performance_measures.txt'),header = TRUE)
       c_df <- c_df %>% filter(permission == 'restrictive')
-      statistics_graphs(df1,variable,'bar',directory,paste0('combined_',out_prefix),c_df)
-    } else{
-      statistics_graphs(df1,variable,'bar',directory,out_prefix)
+      if(variable != 'type'){
+        if (any(c_df$type == 'all')) {
+          c_df <- c_df %>% filter(type == 'all')
+        } 
+      } 
+      c_df$Genotyped <- 'Called'
+      df1$Genotyped <- 'Genotyped'
+      df1 <- rbind(df1,c_df)
     }
+    if(!opt$fillouts){ 
+      statistics_graphs(df1,variable,'bar',directory,out_prefix,opt)
+  
+  
+      if(opt$multiqc){
+        restruct_for_multiqc(df1,variable,'cohort',opt$mq_dir)
+      }
     
+    }
     return(NULL)
   } else{
     assign(paste0(variable,'_df'),df)
@@ -449,7 +522,7 @@ variable_parsing_and_graph <- function(variable) {
 }
 
 binned_vars <- plyr::adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = T)
-
+write("NUMBER 2",stderr())
 
 
 ############################################
@@ -459,56 +532,112 @@ binned_vars <- binned_vars %>% filter(type == 'all') %>% filter(permission == 'r
 purity_nas <- binned_vars[grepl('^N',binned_vars$purity_bin) & !is.na(binned_vars$purity_bin),]
 purity_nas$Variable_ID <- 'purity'
 
-if(!is.null(opt$called_directory)){
+binned_vars <- binned_vars %>% mutate(Variable_ID =  factor(ifelse(!is.na(t_var_freq_bin),'vaf',ifelse(!is.na(purity_bin),'purity',NA)) )) %>%
+  mutate(Frequency = factor(ifelse(!is.na(t_var_freq_bin),t_var_freq_bin,ifelse(!is.na(purity_bin),purity_bin,NA)),levels=tags)) %>% filter(!is.na(Frequency))
+vaf_mut_count <- ggplot(binned_vars[binned_vars$Variable_ID == 'vaf',], aes(x = Frequency, y = total_var_count)) +
+  geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + labs(y=NULL) +
+  theme(axis.text.x = element_blank(),legend.position = "none",axis.title.x = element_blank(),legend.background=element_blank(),legend.title=element_blank()) +
+  scale_x_discrete(labels = levels(binned_vars[binned_vars$Variable_ID == 'vaf','Frequency']),drop=FALSE) + annotate('text', label='VAF', x=Inf, y=Inf, hjust=1, vjust=1)+ labs(x=NULL)
+
+pur_sample_count <- ggplot(binned_vars[binned_vars$Variable_ID == 'purity',], aes(x = Frequency, y = n_samples)) +
+  geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + labs(y=NULL) +
+  theme(axis.text.x = element_blank(),axis.title.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+  scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) +annotate('text', label='Purity', x=Inf, y=Inf, hjust=1, vjust=1) 
+
+
+na_variant <- ggplot(purity_nas[purity_nas$Variable_ID == 'vaf',], aes(x = purity_bin, y = total_var_count)) +
+  geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + ylab('N Mutations') +
+  theme(axis.text.x = element_blank(),legend.position = "none",axis.title.x = element_blank(),legend.background=element_blank(),legend.title=element_blank()) +
+  scale_x_discrete(labels = c('N/A'),drop=FALSE) + annotate('text', label='VAF', x=-Inf, y=Inf, hjust=1, vjust=1)+ labs(x=NULL) + ylim(0,1)
+na_sample_count <- ggplot(purity_nas,aes(x = purity_bin, y = n_samples)) + geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() +
+  theme(axis.title.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+  scale_x_discrete(labels = levels(purity_nas[,'purity_bin']),drop=FALSE) + ylab("N Samples")
+
+if(opt$fillout_to_pr){
+  write(opt$called_director,stderr())
+  write(opt$called_out_prefix,stderr())
+  binned_vars_p <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_purity_bin_cohort_performance_measures.txt'), header = TRUE)
+  binned_vars_v <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_t_var_freq_bin_cohort_performance_measures.txt'), header = TRUE)
+  binned_vars_p$Variable_ID <- 'called_purity'
+  binned_vars_v$Frequency <- binned_vars_v$t_var_freq_bin
+  binned_vars_p$Frequency <- binned_vars_p$purity_bin
+  binned_vars_v$Variable_ID <- 'called_vaf'
+  write(colnames(binned_vars_v),stderr())
+  shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','Variable_ID','Frequency')
   
-}else{
+  c_binned_vars <- rbind(binned_vars_p[,shared_cols],binned_vars_v[,shared_cols])
   
-  binned_vars <- binned_vars %>% mutate(Variable_ID =  factor(ifelse(!is.na(t_var_freq_bin),'vaf',ifelse(!is.na(purity_bin),'purity',NA)) )) %>%
-    mutate(Frequency = factor(ifelse(!is.na(t_var_freq_bin),t_var_freq_bin,ifelse(!is.na(purity_bin),purity_bin,NA)),levels=tags)) %>% filter(!is.na(Frequency))
-  # 
+
+  c_binned_vars <- c_binned_vars %>%   mutate(Frequency = factor(Frequency,levels=tags)) %>% 
+    filter(!is.na(Frequency)) %>% filter(type == 'all') %>% filter(permission == 'restrictive')
+  binned_vars <- binned_vars %>% mutate(Variable_ID =  factor(ifelse(!is.na(t_var_freq_bin),'genotyped_vaf',ifelse(!is.na(purity_bin),'genotyped_purity',NA)) ))
+  c_binned_vars$Genotyped <- 'Called'
+  binned_vars$Genotyped <- 'Genotyped'
+  binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars)
+ purity_nas$Variable_ID <- 'genotyped_purity'
+
+ c_purity_nas <- c_binned_vars[grepl('^N',c_binned_vars$purity_bin) & !is.na(c_binned_vars$purity_bin),]
+ purity_nas$Genotyped <- 'Genotyped'
+ purity_nas <- rbind(c_purity_nas,purity_nas)
   
-  vaf_mut_count <- ggplot(binned_vars[binned_vars$Variable_ID == 'vaf',], aes(x = Frequency, y = total_var_count)) +
-    geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + ylab('N Mutations') +
-    theme(axis.text.x = element_blank(),legend.position = "top",axis.title.x = element_blank(),legend.background=element_blank(),legend.title=element_blank()) +
-    scale_x_discrete(labels = levels(binned_vars[binned_vars$Variable_ID == 'vaf','Frequency']),drop=FALSE) + annotate('text', label='VAF', x=Inf, y=Inf, hjust=1, vjust=1)+ labs(x=NULL)
-  recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +  scale_color_jama() +
-    geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-    scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1) + labs(x=NULL)+ ylab('Recall')
-  precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +  scale_color_jama() +
-    geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-    scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1) + ylab('Precision')
-  pur_sample_count <- ggplot(binned_vars[binned_vars$Variable_ID == 'purity',], aes(x = Frequency, y = n_samples)) +
-        geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() +
-        theme(axis.text.x = element_blank(),axis.title.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-        scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) +annotate('text', label='Purity', x=-Inf, y=Inf, hjust=0, vjust=1) + ylab("N Samples")
-   
+}
+binned_vars$Variable_ID <- as.character(binned_vars$Variable_ID)
+
+purity_nas$Variable_ID <- as.character(purity_nas$Variable_ID)
+colr_ids <- c(purity = "#374e55FF", vaf = "#DF8F44FF",genotyped_purity="#00A1D5FF",genotyped_vaf="#B24745FF",called_purity = "#374e55FF", called_vaf = "#DF8F44FF")
+colr_ids <- colr_ids[names(colr_ids) %in% binned_vars$Variable_ID]
+recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +  scale_color_manual(values=colr_ids) +
+  geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+  scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1) + labs(x=NULL,y = NULL)
+
+precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +   scale_color_manual(values=colr_ids) +
+  geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+  scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1)  + labs(x= NULL,y = NULL)
+
+na_recall_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'recall',] , aes(x = purity_bin, y = value,group = Variable_ID, color = Variable_ID)) + geom_point()  +    scale_color_manual(values=colr_ids) +
+  geom_errorbar(aes(ymin =lower, ymax = upper, width = 0)) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+  scale_x_discrete(labels = levels(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Recall')
+na_precision_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'precision',] , aes(x = purity_bin, y = value,group = Variable_ID, color = Variable_ID)) + geom_point()  +  scale_color_manual(values=colr_ids) +
+  geom_errorbar(aes(ymin =lower, ymax = upper, width = 0)) + theme_classic() +theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+  scale_x_discrete(labels = unique(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Precision')  + labs(x=NULL)
+
+write("NUMBER 3",stderr())
+
+pgrid <- plot_grid(na_variant,vaf_mut_count,na_sample_count,pur_sample_count,na_recall_bin,recall_bin,na_precision_bin,precision_bin,ncol = 2, rel_widths = c(0.13,1),align = 'hv')
+x.grob <- textGrob("Frequency")
+pgrid <- grid.arrange(arrangeGrob(pgrid,bottom = x.grob))
+legend <- get_legend(precision_bin + theme(legend.position = "bottom"))
+p <- plot_grid(pgrid, legend, nrow = 2, rel_heights = c(1, .1))
+if(opt$multiqc){
   
-  na_variant <- ggplot(purity_nas[purity_nas$Variable_ID == 'vaf',], aes(x = purity_bin, y = total_var_count)) +
-    geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + ylab('N Mutations') +
-    theme(axis.text.x = element_blank(),legend.position = "top",axis.title.x = element_blank(),legend.background=element_blank(),legend.title=element_blank()) +
-    scale_x_discrete(labels = c('N/A'),drop=FALSE) + annotate('text', label='VAF', x=-Inf, y=Inf, hjust=1, vjust=1)+ labs(x=NULL) + ylim(0,1)
+  png(paste0(opt$mq_dir,'binned_vars_mqc.png'),width=1000)
+  print(p)
+  dev.off()
+
+    binned_vars_vaf <- binned_vars %>% filter(grepl('vaf',Variable_ID))
+    binned_vars_pur <- binned_vars %>% filter(grepl('purity',Variable_ID))
   
-  na_sample_count <- ggplot(purity_nas,aes(x = purity_bin, y = n_samples)) + geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() +
-    theme(axis.title.x = element_blank(),legend.position = "top",legend.background=element_blank(),legend.title=element_blank()) +
-    scale_x_discrete(labels = levels(purity_nas[,'purity_bin']),drop=FALSE) + annotate('text', label='Purity', x=-Inf, y=Inf, hjust=0, vjust=1) + ylab("N Samples")
-  na_recall_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'recall',] , aes(x = purity_bin, y = value,group = Variable_ID, color = Variable_ID)) + geom_point()  +  scale_color_jama() +
-    geom_errorbar(aes(ymin =lower, ymax = upper, width = 0.1)) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-    scale_x_discrete(labels = levels(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Recall')
-  na_precision_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'precision',] , aes(x = purity_bin, y = value,group = Variable_ID, color = Variable_ID)) + geom_point()  +  scale_color_jama() +
-    geom_errorbar(aes(ymin =lower, ymax = upper, width = 0.1)) + theme_classic() +theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "bottom",legend.background=element_blank(),legend.title=element_blank()) +
-    scale_x_discrete(labels = unique(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Precision') + xlab("Frequency")
+  colnames(binned_vars_vaf)[colnames(binned_vars_vaf) == 'Frequency'] <- 'VAF'
+  colnames(purity_nas)[colnames(purity_nas) == 'purity_bin']  <- 'Purity'
+  colnames(binned_vars_pur)[colnames(binned_vars_pur) == 'Frequency'] <- 'Purity'
+
+  shared_cols <- c('Variable_ID','Purity','permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')
+  if(opt$fillout_to_pr){
+    shared_cols <- c(shared_cols, 'Genotyped')
+  }
+  binned_vars_pur <- rbind(purity_nas[shared_cols],binned_vars_pur[,shared_cols])
+  restruct_for_multiqc(binned_vars_vaf,'VAF','cohort',opt$mq_dir)
+  restruct_for_multiqc(binned_vars_pur,'Purity','cohort',opt$mq_dir)
   
+}
+if(!opt$fillouts){
+  pdf(paste0(directory,'images/',out_prefix,'_binned_vars.pdf'))
   
-  
-  
-  
-  pdf(paste0(directory,'pdfs/',out_prefix,'_binned_vars','.pdf'))
-  ggarrange(ggarrange(na_variant,na_sample_count,na_recall_bin,na_precision_bin, ncol= 1, align ='hv',common.legend = TRUE, legend = "bottom"),ggarrange(vaf_mut_count,pur_sample_count,recall_bin,precision_bin, ncol = 1,common.legend = TRUE, legend = "bottom",align = "hv"),ncol = 2,align = "hv", widths = c(0.13,1.0),common.legend = TRUE, legend = "bottom")
-  
-      print(ggarrange(vaf_mut_count,pur_sample_count,recall_bin,precision_bin, ncol = 1,common.legend = TRUE, legend = "bottom",align = "hv"))
-  
+    print(p)
   dev.off()
 }
+write("NUMBER 5",stderr())
+
 # ############################################
 
 # ########## SAMPLE LEVEL PLOTS #############
@@ -525,15 +654,24 @@ sample_level_raw <- lapply(all_samples, function(sample){
 sample_level_raw <- do.call(rbind,sample_level_raw)
 cols.nums <- c(seq(2,8,1),seq(10,12,1))
 sample_level_raw[cols.nums] <- lapply(sample_level_raw[cols.nums], as.numeric)
-sample_level_raw <- sample_level_raw[,c('permission','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+sample_level_raw <- sample_level_raw[,c('permission','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
 
 write.table(sample_level_raw,paste0(directory,out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
-
+sample_level_raw <- sample_level_raw[sample_level_raw$permission == 'restrictive',]
 if(!is.null(opt$called_directory)){
   c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_sample_overview_performance_measures.txt'),header = TRUE)
-  statistics_graphs(sample_level_raw[sample_level_raw$permission == 'restrictive',],'type','boxplot',directory,paste0('combined_',out_prefix),c_df[c_df$permission == 'restrictive',])
-} else {
-  statistics_graphs(sample_level_raw[sample_level_raw$permission == 'restrictive',],'type','boxplot',directory,out_prefix)
+  c_df <- c_df[c_df$permission == 'restrictive',]
+  c_df$Genotyped <- 'Called'
+  sample_level_raw$Genotyped <- 'Genotyped'
+  write(colnames(sample_level_raw),stderr())
+  sample_level_raw <- rbind(sample_level_raw,c_df)
+}
+if(!opt$fillouts){
+  statistics_graphs(sample_level_raw,'type','boxplot',directory,out_prefix,opt)
+  
+  if(opt$multiqc){
+    restruct_for_multiqc(sample_level_raw,'type','sample',opt$mq_dir)
+  }
 }
 
 
@@ -552,26 +690,46 @@ variable_parsing_and_graph_sample <- function(variable) {
   sample_level_df <- do.call(rbind,sample_level_df)
   cols.nums <- c(seq(2,8,1),seq(10,12,1))
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
-  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','truth_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
 
   write.table(sample_level_df,paste0(directory,out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   
   if(variable %nin% binned_variables){
     df1 <- sample_level_df %>% filter(permission == 'restrictive')
-    if(!is.null(opt$called_directory)){
-      c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_',variable,'_sample_performance_measures.txt'),header = TRUE)
-      c_df <- c_df %>% filter(permission == 'restrictive')
-      statistics_graphs(df1,variable,'boxplot',directory,paste0('combined_',out_prefix),c_df)
-    } else{
-      statistics_graphs(df1,variable,'boxplot',directory,out_prefix)
-    }
-  } 
+    if(variable != 'type'){
+      if (any(df1$type == 'all')) {
+        df1 <- df1 %>% filter(type == 'all')
+      } 
+     
+    
+      if(!is.null(opt$called_directory)){
+        c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_',variable,'_sample_performance_measures.txt'),header = TRUE)
+        c_df <- c_df %>% filter(permission == 'restrictive')
+        c_df$Genotyped <- 'Called'
+        df1$Genotyped <- 'Genotyped'
+        if(variable != 'type'){
+          if (any(c_df$type == 'all')) {
+            c_df <- c_df %>% filter(type == 'all')
+          } 
+        } 
+        df1 <- rbind(df1,c_df)
+      }
+      
+      if(!opt$fillouts){
+        statistics_graphs(df1,variable,'boxplot',directory,out_prefix,opt)
+        
+        if(opt$multiqc){
+          restruct_for_multiqc(df1,variable,'sample',opt$mq_dir)
+        }
+      }
+    } 
+  }
   return(NULL)
 }
 
 
 sample_variables_to_parse <- c('oncogenic_tf','clonality','substitutions','is_non_syn_mut','t_var_freq_bin', additional_variables)
-
+    
 returning_null <- plyr::adply(sample_variables_to_parse, 1, variable_parsing_and_graph_sample, .parallel = T)
 
 ############################################
@@ -583,7 +741,17 @@ pr_curve_df <- pr_curve_df %>% filter(statistic_name %in% c('recall','precision'
   select(c(statistic_name,value,Tumor_Sample_Barcode,purity)) %>% distinct(statistic_name,value,Tumor_Sample_Barcode,purity) %>%
   pivot_wider(id_cols= c(Tumor_Sample_Barcode, purity),names_from = statistic_name, values_from =  value) 
   
-pdf(paste0(directory,'pdfs/',out_prefix,'_precision_recall_plot','.pdf'))
+
+if(opt$multiqc){
+  png(paste0(opt$mq_dir,'precision_recall_plot_mqc.png'),width=600)
+  ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
+    theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
+    ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
+  dev.off()
+  
+}
+  pdf(paste0(directory,'images/',out_prefix,'_precision_recall_plot.pdf'))
+
   ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
     theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
     ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
@@ -620,11 +788,10 @@ if (opt$fillouts){
   test_dir <- paste0(fillout_results_dir,'test/')
   rscript_dir <- getwd()
   if(is.null(opt$bed_file)){
-    write(paste0('bsub -J  collect_fillouts_results -e ',fillout_output_dir,' -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ),stderr())
-    
-    system(paste0('bsub -J  collect_fillouts_results -e ',fillout_output_dir,' -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ))
+
+    system(paste0('bsub -J  collect_fillouts_results -e ',directory,out_prefix,'_fillout_restructuring.err -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ))
   } else{
-    system(paste0('bsub -J  collect_fillouts_results -e ',fillout_output_dir,' -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -b ',opt$bed_file ,' -j TRUE"' ))
+    system(paste0('bsub -J  collect_fillouts_results -e ',directory,out_prefix,'_fillout_restructuring.err -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -b ',opt$bed_file ,' -j TRUE"' ))
     
   }
   
@@ -654,11 +821,8 @@ if (opt$fillouts){
   test <- as.data.frame(unnest(test, substitutions))
   
   
-  write.table(ground,paste0(directory,out_prefix,'_ground_PR_labeled.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
-  write.table(test,paste0(directory,out_prefix,'_test_PR_labeled.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+  write.table(ground,paste0(directory,out_prefix,'_ground_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+  write.table(test,paste0(directory,out_prefix,'_test_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   
-  
-}
-if(opt$multiqc){
   
 }
