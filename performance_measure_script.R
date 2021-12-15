@@ -750,6 +750,8 @@ if(opt$multiqc){
   dev.off()
   
 }
+write('Number 5.8 ',stderr())
+
   pdf(paste0(directory,'images/',out_prefix,'_precision_recall_plot.pdf'))
 
   ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
@@ -757,6 +759,7 @@ if(opt$multiqc){
     ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
 dev.off()
 ############################################
+write('Number 6 ',stderr())
 
 ###### If Fillouts, check status of fillouts and wait for completion 
 is_job_still_running <- function(job_name) {
@@ -803,10 +806,12 @@ if (opt$fillouts){
   }
   if(opt$fillout_to_pr){
   
+    write('Number 7 ',stderr())
     
     test <- test %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$detectable] , TRUE, FALSE))
     ground <- ground %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$detectable], TRUE, FALSE))
- 
+    write('Number 8 ',stderr())
+    
     test <- test %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$evidence], TRUE, FALSE))
     ground <- ground %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$evidence], TRUE, FALSE))
     
@@ -819,7 +824,7 @@ if (opt$fillouts){
   }
   ground <- as.data.frame(unnest(ground, substitutions))
   test <- as.data.frame(unnest(test, substitutions))
-  
+  write('Number 9 ',stderr())
   
   write.table(ground,paste0(directory,out_prefix,'_ground_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   write.table(test,paste0(directory,out_prefix,'_test_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
