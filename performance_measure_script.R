@@ -124,6 +124,8 @@ if(opt$multiqc && !opt$fillouts){
   opt$mq_dir <- paste0(directory,'multiqc_reports/')
   dir.create(opt$mq_dir)
 
+} else{
+  opt$multiqc <- FALSE
 }
 
 if(opt$fillout_to_pr){
