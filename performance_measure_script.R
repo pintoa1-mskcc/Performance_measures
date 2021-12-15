@@ -357,7 +357,7 @@ if(opt$fillouts){
 
   fillout_commands <-  function(sample) {
     sample_fillout <- fillout_maf[fillout_maf$Tumor_Sample_Barcode == sample,]
-
+    normal <- fillout_mapping_ground$normal_id[fillout_mapping_ground$tumor_id == sample]
     
     test_tumor_bam <- fillout_mapping_test$tumor_bam[fillout_mapping_test$tumor_id == sample]
     test_normal_bam <- fillout_mapping_test$normal_bam[fillout_mapping_test$tumor_id == sample]
@@ -375,14 +375,13 @@ if(opt$fillouts){
     job_name <- paste0('fillout_',out_prefix,sample)
     sample_maf <- paste0(fillout_combined_mafs,sample,'_UNIFIED_GROUND_TEST.maf')
     write.table(sample_fillout,file=sample_maf, row.names=FALSE,quote=FALSE, sep= '\t')
-    system("module load singularity")
-    system("module load R/R-4.0.5")
-    test_fillout_command <- paste0('bsub -J ',job_name,'_test -e ',fillout_output_dir,'logs/',job_name,'_test.err -n 2 -R rusage[mem=5] -We 0:59 " /juno/work/ccs/pintoa1/fillout_testing/maf_fillout.py -m ', sample_maf, ' -b ',test_tumor_bam,' ', test_normal_bam,
-                                   ' -o ',fillout_results_dir,'test/test',sample,'_fillout.maf -mo"')
+
+    test_fillout_command <- paste0('bsub -J ',job_name,'_test -e ',fillout_output_dir,'logs/',job_name,'_test.err -n 2 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
+                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', test_dir_norm,':', test_dir_norm,' -B ', test_dir_tumor,':',test_dir_tumor, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/get_base_counts_multisample.img /bin/bash -c "GetBaseCountsMultiSample --omaf --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,test_tumor_bam,' ',normal,test_normal_bam,' --output ',fillout_results_dir,'test/test',sample,'_fillout.maf"' )
     
   
-    ground_fillout_command <- paste0('bsub -J ',job_name,'_ground -e ',fillout_output_dir,'/logs/',job_name,'_ground.err -n 2 -R rusage[mem=5] -We 0:59  " /juno/work/ccs/pintoa1/fillout_testing/maf_fillout.py -m ', sample_maf, ' -b ',ground_tumor_bam,' ', ground_normal_bam,
-                                     ' -o ',fillout_results_dir,'ground/ground_',sample,'_fillout.maf -mo"')
+    test_fillout_command <- paste0('bsub -J ',job_name,'ground -e ',fillout_output_dir,'logs/',job_name,'_ground.err -n 2 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
+                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', ground_dir_norm,':', ground_dir_norm,' -B ', ground_dir_tumor,':',ground_dir_tumor, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/get_base_counts_multisample.img /bin/bash -c "GetBaseCountsMultiSample --omaf --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,ground_tumor_bam,' ',normal,ground_normal_bam,' --output ',fillout_results_dir,'ground/ground',sample,'_fillout.maf"' )
     write(test_fillout_command,stderr())  
     system(test_fillout_command)
      
