@@ -73,7 +73,7 @@ if(opt$performance_measures) {
   
   fillex_ground <- do.call(rbind,lapply(ground_files,function(file) {
     write(file,stderr())
-    output <- performance_measures_expected_formatting(file.opt) 
+    output <- performance_measures_expected_formatting(file,opt) 
     
     return(output)
   } ))
