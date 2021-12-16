@@ -56,9 +56,9 @@ performance_measures_expected_formatting <- function(file,opt){
 
 format_output_name <- function(opt,suffix) {
   if(is.null(opt$out_prefix)){
-    return(paste0(opt$directory,suffix))
+    return(paste0(opt$directory,'/fillout/',suffix))
   }else {
-   return(paste0(opt$directory,opt$out_prefix,'_',suffix))
+   return(paste0(opt$directory,'/fillout/',opt$out_prefix,'_',suffix))
   }
 }
 
@@ -95,7 +95,7 @@ if(opt$performance_measures) {
   write.table(fillex_ground,ground_file_name,quote = FALSE, row.names = FALSE,sep = "\t")
   
   write.table(fillex_test,test_file_name,quote = FALSE, row.names = FALSE,sep = "\t")
-  bsub_command <- paste0('bsub -e ', opt$directory, 'performance_measure_fillout.err -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory, ' -c ', opt$directory,' -m TRUE -p TRUE -o fillout_', opt$out_prefix)
+  bsub_command <- paste0('bsub -e ', opt$directory,'logs/',opt$out_prefix, '_performance_measure_fillout.err -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory, ' -c ', opt$directory,' -m TRUE -p TRUE -o fillout_', opt$out_prefix)
   
   if(!is.null(opt$called_directory)){
     bsub_command <- paste0(bsub_command, ' -c ', opt$called_directory, ' -u ', opt$out_prefix)

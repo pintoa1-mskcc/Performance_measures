@@ -96,6 +96,7 @@ write(paste0("Test file: ", opt$test),stderr())
 directory <- paste0(opt$directory,'/')
 dir.create(directory)
 dir.create(paste0(directory,'images/'))
+dir.create(paste0(directory,'logs/'))
 write(paste0("Output directory: ",directory),stderr())
 
 if(is.null(opt$name_ground)){
@@ -159,7 +160,7 @@ if(any(c(missing_in_test,missing_in_ground))) {
   }
   warning_return_1 <- c(names_m_i_g,names_m_i_t)
   names(warning_return_1) <- paste0('Samples missing in ', opt$name_ground,' or ',opt$name_test,' MAF')
-  write.table(warning_return_1,file=paste0(directory,'000.txt'),quote = FALSE)
+  write.table(warning_return_1,file=paste0(directory,'logs/000.txt'),quote = FALSE)
 }
 
 #Keep test tumor samples which are not misisngi n ground 
@@ -342,7 +343,7 @@ if(opt$fillouts){
   if(any(all_provided_bams_tumor_ids %nin% fillout_maf$Tumor_Sample_Barcode)){
     warning('A provided Tumor BAM for fillouts does not exist within the provided MAFs. This sample will not have fillouts run as it has no mutations. See 001.txt for the sample id')
     removed_bam_sample <- all_provided_bams_tumor_ids[all_provided_bams_tumor_ids %nin% fillout_maf$Tumor_Sample_Barcode]
-    write.table(removed_bam_sample,file=paste0(directory,'001.txt'),quote = FALSE) 
+    write.table(removed_bam_sample,file=paste0(directory,'logs/001.txt'),quote = FALSE) 
   }
   if (any( fillout_maf$Tumor_Sample_Barcode %nin% fillout_mapping_test$tumor_id) | any(fillout_maf$Tumor_Sample_Barcode %nin% fillout_mapping_ground$tumor_id)) {
     stop('A sample within the P/R cohort is missing from the provided fillout BAMs. Please rerun this script again with the correct bam mapping. ')
@@ -744,23 +745,24 @@ pr_curve_df <- pr_curve_df %>% filter(statistic_name %in% c('recall','precision'
   select(c(statistic_name,value,Tumor_Sample_Barcode,purity)) %>% distinct(statistic_name,value,Tumor_Sample_Barcode,purity) %>%
   pivot_wider(id_cols= c(Tumor_Sample_Barcode, purity),names_from = statistic_name, values_from =  value) 
   
-
-if(opt$multiqc){
-  png(paste0(opt$mq_dir,'precision_recall_plot_mqc.png'),width=600)
-  ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
-    theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
-    ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
-  dev.off()
+if(!opt$fillouts){
+  if(opt$multiqc){
+    png(paste0(opt$mq_dir,'precision_recall_plot_mqc.png'),width=600)
+    ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
+      theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
+      ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
+    dev.off()
+    
+  }
+  write('Number 5.8 ',stderr())
   
+  pdf(paste0(directory,'images/',out_prefix,'_precision_recall_plot.pdf'))
+  
+    ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
+      theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
+      ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
+  dev.off()
 }
-write('Number 5.8 ',stderr())
-
-pdf(paste0(directory,'images/',out_prefix,'_precision_recall_plot.pdf'))
-
-  ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
-    theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
-    ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
-dev.off()
 ############################################
 write('Number 6 ',stderr())
 
@@ -795,9 +797,9 @@ if (opt$fillouts){
   rscript_dir <- getwd()
   if(is.null(opt$bed_file)){
 
-    system(paste0('bsub -J  collect_fillouts_results -e ',directory,out_prefix,'_fillout_restructuring.err -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ))
+    system(paste0('bsub -J  collect_fillouts_results -e ',directory,'logs/',out_prefix,'_fillout_restructuring.err -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ))
   } else{
-    system(paste0('bsub -J  collect_fillouts_results -e ',directory,out_prefix,'_fillout_restructuring.err -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -b ',opt$bed_file ,' -j TRUE"' ))
+    system(paste0('bsub -J  collect_fillouts_results -e ',directory,'logs/',out_prefix,'_fillout_restructuring.err -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -b ',opt$bed_file ,' -j TRUE"' ))
     
   }
   
