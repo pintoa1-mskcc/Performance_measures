@@ -73,15 +73,15 @@ if(opt$performance_measures) {
   
   fillex_ground <- do.call(rbind,lapply(ground_files,function(file) {
     write(file,stderr())
-    output <- restructure_mafs(file) 
-    output1 <- performance_measures_expected_formatting(output,opt)
-    return(output1)
+    output <- performance_measures_expected_formatting(file.opt) 
+    
+    return(output)
   } ))
   
   fillex_test <- do.call(rbind,lapply(test_files,function(file) {
-    output <- restructure_mafs(file) 
-    output1 <- performance_measures_expected_formatting(output,opt)
-    return(output1)
+    output <- performance_measures_expected_formatting(file,opt) 
+   
+    return(output)
   } ))
   
   
@@ -109,11 +109,4 @@ if(opt$performance_measures) {
   }
   
   system(bsub_command)
-} else { 
-  fillex<- do.call(rbind,lapply(ground_files,restructure_mafs))
-  
-  file_name <- format_output_name(opt$prefix,'mut_somatic_fillout.maf')
-  
-  write.table(fillex,file_name,quote = FALSE, row.names = FALSE,sep = "\t")
-}
-
+} 
