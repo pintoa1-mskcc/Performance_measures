@@ -378,11 +378,11 @@ if(opt$fillouts){
     sample_maf <- paste0(fillout_combined_mafs,sample,'_UNIFIED_GROUND_TEST.maf')
     write.table(sample_fillout,file=sample_maf, row.names=FALSE,quote=FALSE, sep= '\t')
 
-    test_fillout_command <- paste0('bsub -J ',job_name,'_test -e ',fillout_output_dir,'logs/',job_name,'_test.err -n 2 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
+    test_fillout_command <- paste0('bsub -J ',job_name,'_test -e ',fillout_output_dir,'logs/',job_name,'_test.err -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
                                    fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', test_dir_norm,':', test_dir_norm,' -B ', test_dir_tumor,':',test_dir_tumor, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/get_base_counts_multisample.img /bin/bash -c "GetBaseCountsMultiSample --omaf --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,test_tumor_bam,' ',normal,test_normal_bam,' --output ',fillout_results_dir,'test/test',sample,'_fillout.maf"' )
     
   
-    test_fillout_command <- paste0('bsub -J ',job_name,'ground -e ',fillout_output_dir,'logs/',job_name,'_ground.err -n 2 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
+    test_fillout_command <- paste0('bsub -J ',job_name,'ground -e ',fillout_output_dir,'logs/',job_name,'_ground.err -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
                                    fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', ground_dir_norm,':', ground_dir_norm,' -B ', ground_dir_tumor,':',ground_dir_tumor, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/get_base_counts_multisample.img /bin/bash -c "GetBaseCountsMultiSample --omaf --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,ground_tumor_bam,' ',normal,ground_normal_bam,' --output ',fillout_results_dir,'ground/ground',sample,'_fillout.maf"' )
     write(test_fillout_command,stderr())  
     system(test_fillout_command)
@@ -833,4 +833,8 @@ if (opt$fillouts){
   write.table(test,paste0(directory,out_prefix,'_test_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   
   
+}
+if(opt$multiqc){
+
+  system("bsub -J ",opt$out_prefix,"_multiqc -e ",opt$out_prefix,'_multiqc -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B ',opt$mq_dir, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/multiqc-1.9.sif /bin/bash -c "multiqc ',  opt$mq_dir  ,' -c "')
 }
