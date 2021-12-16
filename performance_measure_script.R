@@ -836,5 +836,5 @@ if (opt$fillouts){
 }
 if(opt$multiqc){
 
-  system("bsub -J ",opt$out_prefix,"_multiqc -e ",opt$out_prefix,'_multiqc -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B ',opt$mq_dir, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/multiqc-1.9.sif /bin/bash -c "multiqc ',  opt$mq_dir  ,' -c "')
+  system("bsub -J ",opt$out_prefix,"_multiqc -e ",opt$out_prefix,'_multiqc -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B ',opt$mq_dir, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/multiqc-1.9.sif /bin/bash -c "multiqc ',  opt$mq_dir  ,' -c /juno/work/ccs/pintoa1/wrapper_pr/develop/pr_mqc.yaml"')
 }
