@@ -122,7 +122,7 @@ if(!is.null(opt$additional_variables) ) {
 }
 
 if(opt$multiqc && !opt$fillouts){
-  opt$mq_dir <- paste0(directory,'multiqc_reports/')
+  opt$mq_dir <- paste0(directory,'mqc/')
   dir.create(opt$mq_dir)
 
 } else{
@@ -831,12 +831,12 @@ if (opt$fillouts){
   test <- as.data.frame(unnest(test, substitutions))
   write('Number 9 ',stderr())
   
-  write.table(ground,paste0(directory,out_prefix,'_ground_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
-  write.table(test,paste0(directory,out_prefix,'_test_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
-  
+ 
   
 }
 if(opt$multiqc){
  write(paste0("bsub -J ",opt$out_prefix,"_multiqc -e ",opt$out_prefix,'_multiqc -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B ',opt$mq_dir, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/multiqc-1.9.sif /bin/bash -c "multiqc ',  opt$mq_dir  ,' -c /juno/work/ccs/pintoa1/wrapper_pr/develop/pr_mqc.yaml"'),stderr())
   system(paste0("bsub -J ",opt$out_prefix,"_multiqc -e ",opt$out_prefix,'_multiqc -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B ',opt$mq_dir, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/multiqc-1.9.sif /bin/bash -c "multiqc ',  opt$mq_dir  ,' -c /juno/work/ccs/pintoa1/wrapper_pr/develop/pr_mqc.yaml"'))
 }
+write.table(ground,paste0(directory,out_prefix,'_ground_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+write.table(test,paste0(directory,out_prefix,'_test_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
