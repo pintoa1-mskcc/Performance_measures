@@ -328,7 +328,7 @@ ground[is.na(ground$purity_bin),'purity_bin'] <- 'N/A'
 ######### IF FILLOUTS RETURN FILLOUTS MAFS ############################
 if(opt$fillouts){
 
-  fillout_maf <- rbind(ground,test)
+  fillout_maf <- rbind(ground,test[test$var_tag %nin% ground$var_tag,])
   fillout_maf <- fillout_maf[!duplicated(fillout_maf$var_tag),]
   fillout_maf <- as.data.frame(unnest(fillout_maf, substitutions))
   
