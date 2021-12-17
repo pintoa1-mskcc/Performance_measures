@@ -50,7 +50,7 @@ performance_measures_expected_formatting <- function(file,opt){
   n <- colnames(fillout_maf)[grepl('^n',colnames(fillout_maf))]
   maf_with_more_info <- maf_with_more_info[, colnames(maf_with_more_info) %nin% c(t,n)]
   fillout_maf <- fillout_maf[,c('var_tag',t,n,'genotyped_variant_freq')]
-  return(merge(fillout_maf,maf_with_more_info, by = 'var_tag',all.y = FALSE))
+  return(merge(fillout_maf,maf_with_more_info, by = 'var_tag'))
   
 }
 
