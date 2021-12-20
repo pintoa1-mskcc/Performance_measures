@@ -589,7 +589,7 @@ if(opt$fillout_to_pr){
   binned_vars$Genotyped <- 'Genotyped'
   binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars)
  purity_nas$Variable_ID <- 'genotyped_purity'
-
+ purity_nas$Genotyped <- "Called"
  c_purity_nas <- c_binned_vars[grepl('^N',c_binned_vars$purity_bin) & !is.na(c_binned_vars$purity_bin),]
 
  purity_nas <- rbind(c_purity_nas,purity_nas)
