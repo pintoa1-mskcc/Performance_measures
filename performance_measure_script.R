@@ -294,7 +294,11 @@ test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(share
                              include.lowest=TRUE, 
                              right=FALSE, 
                              labels=tags)
-    
+    test$purity_bin <- cut(test$purity, 
+                             breaks=breaks, 
+                             include.lowest=TRUE, 
+                             right=FALSE, 
+                             labels=tags)
 
     tumor_sample_purity_mapping <- ground %>% distinct(Tumor_Sample_Barcode, purity_bin,purity) 
     warning("For the purposes of this analysis, purity is set to the GROUND files purity values for accurate comparison. See 003.txt for samples which have differing purities between ground and test")
