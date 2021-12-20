@@ -315,28 +315,28 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     tmp <- pivot_wider(df[,c(variable,'Tumor_Sample_Barcode','statistic_name','value')], names_from = 'statistic_name', values_from = "value")
     tmp2 <- unique(df[,c(variable,'total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')])
     tmp <- merge(tmp,tmp2)
-    variables <- unique(tmp[,variable])
-    names(variables) <- unique(tmp[,variable])
-
-    tmp3 <-  lapply(variables,function(variable_id){
-      quantile_reports <-  lapply(statistics_to_parse,function(stat) {
-        
-          return(quantile(tmp[tmp[,variable] == variable_id,stat], na.rm = TRUE))
-        
-      })
-      quantile_reports <- as.data.frame(do.call(cbind, quantile_reports))
-      quantile_reports[,'Quantile'] <- row.names(quantile_reports)
-      quantile_reports[,variable] <- variable_id
-      quantile_reports[,'ID'] <- paste0(variable_id,'_',quantile_reports$Quantile)
-      return(quantile_reports)
-   }) 
-    tmp3 <- as.data.frame(do.call(rbind,tmp3))
+    tmp$ID <- tmp$Tumor_Sample_Barcode
+   #  variables <- unique(tmp[,variable])
+   #  names(variables) <- unique(tmp[,variable])
+   # 
+   #  tmp3 <-  lapply(variables,function(variable_id){
+   #    quantile_reports <-  lapply(statistics_to_parse,function(stat) {
+   #      
+   #        return(quantile(tmp[tmp[,variable] == variable_id,stat], na.rm = TRUE))
+   #      
+   #    })
+   #    quantile_reports <- as.data.frame(do.call(cbind, quantile_reports))
+   #    quantile_reports[,'Quantile'] <- row.names(quantile_reports)
+   #    quantile_reports[,variable] <- variable_id
+   #    quantile_reports[,'ID'] <- paste0(variable_id,'_',quantile_reports$Quantile)
+   #    return(quantile_reports)
+   # }) 
 
     if(any(colnames(df) == 'Genotyped')){
       tmp3 <- tmp3 %>% separate(get(variable), c(variable, "Genotyped"), "_")
-      tmp3 <- tmp3[,c('ID',variable,'Genotyped','Quantile',statistics_to_parse)]
+      tmp3 <- tmp3[,c('ID',variable,'Genotyped',statistics_to_parse)]
     }else {
-      tmp3 <- tmp3[,c('ID',variable,'Quantile',statistics_to_parse)]
+      tmp3 <- tmp3[,c('ID',variable,statistics_to_parse)]
     }
 
   }
