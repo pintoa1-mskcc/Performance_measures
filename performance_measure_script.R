@@ -145,7 +145,7 @@ if(opt$fillout_to_pr){
 
 
 ### STEP 1: Check that the samples exist in both files (added one sample to test set for testing purposed)
-if(!opt$fillout_to_pr){
+
 missing_in_ground <- unique(test$Tumor_Sample_Barcode) %nin% unique(ground$Tumor_Sample_Barcode)
 missing_in_test <- unique(ground$Tumor_Sample_Barcode) %nin% unique(test$Tumor_Sample_Barcode)
 
@@ -309,7 +309,7 @@ test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(share
   
 
 #### THIS SCRIPT UTILIZES n_variant_frequency AS AN INDICATOR THAT FILLOUTS HAS BEEN RUN, If fillouts has been run, performance measures are only run on detectable reads
-} else{
+if(opt$fillout_to_pr){
   test <- test %>% mutate(evidence = ifelse(t_alt_count >= 1, TRUE, FALSE))
   test <- test %>% mutate(detectable = ifelse(t_total_count >= 20, TRUE, FALSE))
   
