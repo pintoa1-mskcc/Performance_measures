@@ -288,17 +288,21 @@ test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(share
 # Since we have two MAFs there is potential that there are two different purities between MAFs for the same samples
 ## To analyze recall on purity, we assume that the ground files purity is the purity which we wish to calculate recall over
 # Therefore we create a new variable to get the binned samples in the same bucket for comparison
-  if(length(unique(ground$purity)) != 0){
+
     ground$purity_bin <- cut(ground$purity, 
                              breaks=breaks, 
                              include.lowest=TRUE, 
                              right=FALSE, 
                              labels=tags)
     
-    
-    tumor_sample_purity_mapping <- ground %>% distinct(Tumor_Sample_Barcode, purity_bin) 
-    test <- left_join(test[,colnames(test) != "purity_bin"],tumor_sample_purity_mapping,by = "Tumor_Sample_Barcode")
-  }
+
+    tumor_sample_purity_mapping <- ground %>% distinct(Tumor_Sample_Barcode, purity_bin,purity) 
+    warning("For the purposes of this analysis, purity is set to the GROUND files purity values for accurate comparison. See 003.txt for samples which have differing purities between ground and test")
+    testing_purity_maping <- test %>% distinct(Tumor_Sample_Barcode,purity_bin,purity)
+    combined <- merge(tumor_sample_purity_mapping,testing_purity_maping,by="Tumor_Sample_Barcode",suffixes = c('_ground','_test'))
+    write.table(combined[which(combined$purity_bin_ground != combined$purity_bin_test),],file=paste0(directory,'logs/003.txt'),quote = FALSE) 
+    test <- left_join(test[,colnames(test) %nin% c("purity_bin",'purity')],tumor_sample_purity_mapping,by = "Tumor_Sample_Barcode")
+  
 
 #### THIS SCRIPT UTILIZES n_variant_frequency AS AN INDICATOR THAT FILLOUTS HAS BEEN RUN, If fillouts has been run, performance measures are only run on detectable reads
 } else{
@@ -329,6 +333,7 @@ ground[is.na(ground$purity_bin),'purity_bin'] <- 'N/A'
 if(opt$fillouts){
 
   fillout_maf <- rbind(ground,test)
+
   fillout_maf <- fillout_maf[!duplicated(fillout_maf$var_tag),]
   
   fillout_maf <- as.data.frame(unnest(fillout_maf, substitutions))
