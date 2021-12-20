@@ -639,7 +639,10 @@ if(opt$multiqc){
   if(opt$fillout_to_pr){
     shared_cols <- c(shared_cols, 'Genotyped')
   }
-  binned_vars_pur <- rbind(purity_nas[shared_cols],binned_vars_pur[,shared_cols])
+  write(colnames(purity_nas),stderr())
+  write(colnames(binned_vars_pur),stderr())
+  
+  binned_vars_pur <- rbind(purity_nas[,shared_cols],binned_vars_pur[,shared_cols])
   restruct_for_multiqc(binned_vars_vaf,'VAF','cohort',opt$mq_dir)
   restruct_for_multiqc(binned_vars_pur,'Purity','cohort',opt$mq_dir)
   
