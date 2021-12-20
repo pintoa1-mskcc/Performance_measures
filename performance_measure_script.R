@@ -828,7 +828,12 @@ if (opt$fillouts){
     test <- test %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% ground$var_tag , TRUE, FALSE))
     ground <- ground %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% test$var_tag , TRUE, FALSE))
   }
-
+  ground <- as.data.frame(unnest(ground, substitutions))
+  test <- as.data.frame(unnest(test, substitutions))
+  write('Number 9 ',stderr())
+  write.table(ground,paste0(directory,out_prefix,'_ground_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+  write.table(test,paste0(directory,out_prefix,'_test_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+  
   
  
   
@@ -836,8 +841,3 @@ if (opt$fillouts){
 if(opt$multiqc){
   system(paste0("bsub -J ",opt$out_prefix,"_multiqc -e ",directory,'/logs/',opt$out_prefix,'_multiqc -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B ',opt$mq_dir, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/multiqc-1.9.sif /bin/bash -c "multiqc ',  opt$mq_dir  ,' -c /juno/work/ccs/pintoa1/wrapper_pr/develop/pr_mqc.yaml -o',directory,' "'))
 }
-ground <- as.data.frame(unnest(ground, substitutions))
-test <- as.data.frame(unnest(test, substitutions))
-write('Number 9 ',stderr())
-write.table(ground,paste0(directory,out_prefix,'_ground_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
-write.table(test,paste0(directory,out_prefix,'_test_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
