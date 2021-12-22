@@ -590,7 +590,7 @@ if(opt$fillout_to_pr){
   binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars)
  purity_nas$Variable_ID <- 'genotyped_purity'
  purity_nas$Genotyped <- "Genotyped"
- c_purity_nas <- c_binned_vars[grepl('^N',c_binned_vars$purity_bin) & !is.na(c_binned_vars$purity_bin),]
+ c_purity_nas <- c_binned_vars[grepl('^N',c_binned_vars$Frequency) & !is.na(c_binned_vars$Frequency),]
  write.table(c_purity_nas,'testing_puritiy_nas_for_called.txt')
  purity_nas <- rbind(c_purity_nas,purity_nas)
   
