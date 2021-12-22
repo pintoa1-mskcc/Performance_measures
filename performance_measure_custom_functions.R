@@ -316,6 +316,7 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     tmp2 <- unique(df[,c(variable,'total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')])
     tmp <- merge(tmp,tmp2)
     tmp$ID <- tmp$Tumor_Sample_Barcode
+    tmp3 <- tmp
    #  variables <- unique(tmp[,variable])
    #  names(variables) <- unique(tmp[,variable])
    # 
