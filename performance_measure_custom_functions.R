@@ -315,7 +315,7 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     tmp <- pivot_wider(df[,c(variable,'Tumor_Sample_Barcode','statistic_name','value')], names_from = 'statistic_name', values_from = "value")
     tmp2 <- unique(df[,c(variable,'total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')])
     tmp <- merge(tmp,tmp2)
-    tmp$ID <- tmp$Tumor_Sample_Barcode
+    tmp$ID <- paste(tmp$Tumor_Sample_Barcode,tmp[,variable], sep = '_')
     tmp3 <- tmp
    #  variables <- unique(tmp[,variable])
    #  names(variables) <- unique(tmp[,variable])
@@ -335,9 +335,9 @@ restruct_for_multiqc <- function(df,variable,level,directory){
 
     if(any(colnames(df) == 'Genotyped')){
       tmp3 <- tmp3 %>% separate(get(variable), c(variable, "Genotyped"), "_")
-      tmp3 <- tmp3[,c('ID',variable,'Genotyped',statistics_to_parse)]
+      tmp3 <- tmp3[,c('ID','Tumor_Sample_Barcode',variable,'Genotyped',statistics_to_parse)]
     }else {
-      tmp3 <- tmp3[,c('ID',variable,statistics_to_parse)]
+      tmp3 <- tmp3[,c('ID','Tumor_Sample_Barcode',variable,statistics_to_parse)]
     }
 
   }
