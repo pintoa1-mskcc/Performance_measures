@@ -182,7 +182,7 @@ if(!is.null(opt$bed)){
                    check.valid = FALSE,
                    check.sort = FALSE,
                    check.merge = FALSE,outputFile =paste0(directory,'/',opt$out_prefix,'_',opt$name_test,'.bed'),verbose = TRUE))
-  bed_test <- fread(paste0(directory,'/test.bed'),data.table = FALSE)
+  bed_test <- paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed')
   
   ground_bed <- ground[,c('Chromosome','Start_Position','End_Position','bed_tag')] 
   colnames(ground_bed) <- c('chr','start','end','names')
@@ -190,9 +190,9 @@ if(!is.null(opt$bed)){
             check.zero.based = FALSE,
             check.valid = FALSE,
             check.sort = FALSE,
-            check.merge = FALSE,outputFile = paste0(directory,'/ground.bed'),verbose = TRUE))
+            check.merge = FALSE,outputFile = paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),verbose = TRUE))
   
-  bed_ground <- fread(paste0(directory,'/ground.bed'),data.table = FALSE)
+  bed_ground <- fread(paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),data.table = FALSE)
   
   ground <- ground %>% mutate(on_target = ifelse(bed_tag %in% bed_ground$V4, TRUE,FALSE))
   test <- test %>% mutate(on_target = ifelse(bed_tag %in% bed_test$V4, TRUE,FALSE))
@@ -301,9 +301,9 @@ test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(share
                              labels=tags)
 
     tumor_sample_purity_mapping <- ground %>% distinct(Tumor_Sample_Barcode, purity_bin,purity) 
-    warning("For the purposes of this analysis, purity is set to the GROUND files purity values for accurate comparison. See 003.txt for samples which have differing purities between ground and test")
+    warning(paste0("For the purposes of this analysis, purity is set to the ",opt$name_ground," files purity values for accurate comparison. See 003.txt for samples which have differing purities between ", opt$name_ground, " and ", opt$name_test))
     testing_purity_maping <- test %>% distinct(Tumor_Sample_Barcode,purity_bin,purity)
-    combined <- merge(tumor_sample_purity_mapping,testing_purity_maping,by="Tumor_Sample_Barcode",suffixes = c('_ground','_test'))
+    combined <- merge(tumor_sample_purity_mapping,testing_purity_maping,by="Tumor_Sample_Barcode",suffixes = c(opt$name_ground,opt$name_test))
     write.table(combined[which(combined$purity_bin_ground != combined$purity_bin_test),],file=paste0(directory,'logs/003.txt'),quote = FALSE) 
     test <- left_join(test[,colnames(test) %nin% c("purity_bin",'purity')],tumor_sample_purity_mapping,by = "Tumor_Sample_Barcode")
   
@@ -364,8 +364,10 @@ if(opt$fillouts){
   dir.create(fillout_results_dir)
   dir.create(paste0(fillout_output_dir,'logs/'))
   
-  dir.create(paste0(fillout_results_dir,'ground/'))
-  dir.create(paste0(fillout_results_dir,'test/'))
+  ground_dir <- paste0(fillout_results_dir,opt$name_ground,'/')
+  test_dir <-paste0(fillout_results_dir,opt$name_test,'/')
+  dir.create(paste0(fillout_results_dir,opt$name_ground))
+  dir.create(paste0(fillout_results_dir,opt$name_test))
   
 
   fillout_commands <-  function(sample) {
@@ -390,11 +392,11 @@ if(opt$fillouts){
     write.table(sample_fillout,file=sample_maf, row.names=FALSE,quote=FALSE, sep= '\t')
 
     test_fillout_command <- paste0('bsub -J ',job_name,'_test -e ',fillout_output_dir,'logs/',job_name,'_test.err -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
-                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', test_dir_norm,':', test_dir_norm,' -B ', test_dir_tumor,':',test_dir_tumor, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',test_tumor_bam,' ',normal,':',test_normal_bam,' --output ',fillout_results_dir,'test/test',sample,'_fillout.maf"' )
+                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', test_dir_norm,':', test_dir_norm,' -B ', test_dir_tumor,':',test_dir_tumor, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --maq 20 --baq 20 --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',test_tumor_bam,' ',normal,':',test_normal_bam,' --output ',fillout_results_dir,opt$name_test,'/',opt$name_test,'_',sample,'_fillout.maf"' )
     
   
-    ground_fillout_command <- paste0('bsub -J ',job_name,'ground -e ',fillout_output_dir,'logs/',job_name,'_ground.err -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
-                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', ground_dir_norm,':', ground_dir_norm,' -B ', ground_dir_tumor,':',ground_dir_tumor, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',ground_tumor_bam,' ',normal,':',ground_normal_bam,' --output ',fillout_results_dir,'ground/ground',sample,'_fillout.maf"' )
+    ground_fillout_command <- paste0('bsub -J ',job_name,'_ground -e ',fillout_output_dir,'logs/',job_name,'_ground.err -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
+                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', ground_dir_norm,':', ground_dir_norm,' -B ', ground_dir_tumor,':',ground_dir_tumor, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --maq 20 --baq 20 --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',ground_tumor_bam,' ',normal,':',ground_normal_bam,' --output ',fillout_results_dir,opt$name_ground,'/',opt$name_ground,'_',sample,'_fillout.maf"' )
     write(test_fillout_command,stderr())  
     system(test_fillout_command)
      
@@ -432,8 +434,7 @@ if(!is.null(opt$bed_file)){
       restruct_for_multiqc(df1,'on_target','cohort',opt$mq_dir)
     }
   
-  } +
-    -
+  } 
   sample_level_df <- lapply(all_samples, function(sample){
     sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
     sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
@@ -590,7 +591,7 @@ if(opt$fillout_to_pr){
   binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars)
  purity_nas$Variable_ID <- 'genotyped_purity'
  purity_nas$Genotyped <- "Genotyped"
- c_purity_nas <- c_binned_vars[grepl('N/A',c_binned_vars$Frequency),]
+ c_purity_nas <- c_binned_vars[grepl('N/A',c_binned_vars$purity_bin),]
  write.table(c_purity_nas,'testing_puritiy_nas_for_called.txt')
  purity_nas <- rbind(c_purity_nas,purity_nas)
   
@@ -805,8 +806,7 @@ if (opt$fillouts){
     Sys.sleep(120) ## Check for the jobs completion every couple of mins.
   }
   
-  ground_dir <- paste0(fillout_results_dir,'ground/')
-  test_dir <- paste0(fillout_results_dir,'test/')
+
   rscript_dir <- getwd()
   if(is.null(opt$bed_file)){
 
@@ -843,8 +843,8 @@ if (opt$fillouts){
   ground <- as.data.frame(unnest(ground, substitutions))
   test <- as.data.frame(unnest(test, substitutions))
   write('Number 9 ',stderr())
-  write.table(ground,paste0(directory,out_prefix,'_ground_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
-  write.table(test,paste0(directory,out_prefix,'_test_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+  write.table(ground,paste0(directory,out_prefix,'_',opt$name_ground,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+  write.table(test,paste0(directory,out_prefix,'_',opt$name_test,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   
   
  
