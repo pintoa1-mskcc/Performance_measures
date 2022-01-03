@@ -102,7 +102,7 @@ custom_data:
         title: "Variant Type"
         placement: 800
       'Tumor_Sample_Barcode':
-	 placement: 700
+        placement: 700
       'Quantile':
         placement: 850
       'recall':
