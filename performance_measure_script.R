@@ -450,6 +450,7 @@ if(!is.null(opt$bed_file)){
     }
   
   } 
+  write('NUMMMMM1',stderr())
   sample_level_df <- lapply(all_samples, function(sample){
     sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
     sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
@@ -466,6 +467,7 @@ if(!is.null(opt$bed_file)){
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
   sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
   
+  write('NUMMMMM2',stderr())
   
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- sample_level_df %>% filter(permission == 'restrictive')
@@ -483,12 +485,16 @@ if(!is.null(opt$bed_file)){
     
     
   }  
+  write('NUMMMMM3',stderr())
+  
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','boxplot',directory,out_prefix,opt)
     if(opt$multiqc){
       restruct_for_multiqc(df1,'on_target','sample',opt$mq_dir)
     }
   } 
+  write('NUMMMMM4',stderr())
+  
   ### ONLY PARSING THE ON TARGET VALUES FROM HERE ON
   ground_off <- ground %>% filter(on_target == FALSE)
   ground <- ground %>% filter(on_target == TRUE)
