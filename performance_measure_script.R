@@ -135,7 +135,7 @@ if(opt$fillout_to_pr){
     stop("If expecting combined results (fillout_to_pr == TRUE), must provide original directory.")
   }
 }
-write(opt, stderr())
+write(unlist(opt), stderr())
 ############################################
 
 
