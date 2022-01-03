@@ -39,7 +39,7 @@ parser$add_argument('-s','--name_test', type = 'character', default = NULL, help
 parser$add_argument('-d','--directory', type='character', default = getwd(),
                     help='output directory [default = current working directory ]')
 parser$add_argument('-v','--additional_variables', type='character',  default = NULL,
-                    help= 'additional columns from MAFs which you would like to run recall and precision. This is a single value or a comma separated list if there is more than one')
+                    help= 'additional columns from MAFs which you would like to run recall and precision. This is a single value or a comma separated list if there is more than one. Additional vars MUST be categorical')
 parser$add_argument("-o", "--out_prefix", type="character", default="date()",
               help="output file name basename [default= %default]")
 parser$add_argument('-f','--fillouts', action='store_true',help = 'RUN fillouts')
@@ -116,6 +116,9 @@ if(!is.null(opt$additional_variables) ) {
     if (variable %nin% colnames(test) | variable %nin% colnames(ground)){
       warning("A provided additional variable to parse does not exist in provided MAFs. This variable will be removed from analysis")
       additional_variables <- additional_variables[additional_variables != variable]
+    } else{
+      test[,variable] <- as.character(test[,variable])
+      ground[,variable] <- as.character(ground[,variable])
     }
   }
 } else  {
@@ -242,7 +245,11 @@ test <- test  %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_P
 shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
 test[match(shared_variants,test$var_tag),'clonality'] <- ground[match(shared_variants, ground$var_tag),'clonality']
 
-
+#Same assumption will hold for any additional variables
+for(variable in additional_variables){
+  test[match(shared_variants,test$var_tag),variable] <- ground[match(shared_variants, ground$var_tag),variable]
+  
+}
 test <- test %>% mutate(ref_to_alt = paste(Reference_Allele,Tumor_Seq_Allele2,sep=">"))  %>%
   mutate(substitutions = ifelse( Variant_Type %nin% c('SNP','SNV'), NA,sapply( ref_to_alt,function(ref_to_alt ) {
     new_sub <- switch(ref_to_alt, "A>C" = "T>G", "T>G" = "T>G","A>G" ="T>C","T>C" = "T>C","A>T" = "T>A","T>A" ="T>A",
@@ -450,7 +457,6 @@ if(!is.null(opt$bed_file)){
     }
   
   } 
-  write('NUMMMMM1',stderr())
   sample_level_df <- lapply(all_samples, function(sample){
     sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
     sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
@@ -467,8 +473,7 @@ if(!is.null(opt$bed_file)){
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
   sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
   
-  write('NUMMMMM2',stderr())
-  
+
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- sample_level_df %>% filter(permission == 'restrictive')
   if (any(df1$type == 'all')) {
@@ -485,16 +490,14 @@ if(!is.null(opt$bed_file)){
     
     
   }  
-  write('NUMMMMM3',stderr())
-  
+
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','boxplot',directory,out_prefix,opt)
     if(opt$multiqc){
       restruct_for_multiqc(df1,'on_target','sample',opt$mq_dir)
     }
   } 
-  write('NUMMMMM4',stderr())
-  
+
   ### ONLY PARSING THE ON TARGET VALUES FROM HERE ON
   ground_off <- ground %>% filter(on_target == FALSE)
   ground <- ground %>% filter(on_target == TRUE)
@@ -611,7 +614,6 @@ if(opt$fillout_to_pr){
   binned_vars_p$Frequency <- binned_vars_p$purity_bin
   binned_vars_v$Variable_ID <- 'called_vaf'
   shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','Variable_ID','Frequency')
-  write('NUM1',stderr())
   c_binned_vars <- rbind(binned_vars_p[,shared_cols],binned_vars_v[,shared_cols])
   
 
