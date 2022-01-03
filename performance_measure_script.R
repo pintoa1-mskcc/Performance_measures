@@ -15,7 +15,7 @@ suppressPackageStartupMessages({library(dplyr)
   library(grid)
   library(gridExtra)
   })
-library(bedr)
+
 ############################################
 doParallel::registerDoParallel(cores = 4)
 
@@ -60,7 +60,6 @@ opt=parser$parse_args()
 if(opt$fillout_to_pr && opt$fillouts){
   opt$fillout_to_pr <- FALSE
 }
-write(opt$fillouts, stderr())
 if(opt$fillouts){
   if(is.null(opt$ground_fillout_mapping) || is.null(opt$test_fillout_mapping)){
     stop("Indicated running fillouts, but did not provided mapping files")
@@ -71,6 +70,7 @@ test <- fread(opt$test,data.table = FALSE)
 ground <- fread(opt$ground,data.table = FALSE)
 
 if(!is.null(opt$bed)){
+  library(bedr)
   bed <- fread(opt$bed, data.table = FALSE)
 }
 
@@ -97,6 +97,8 @@ directory <- paste0(opt$directory,'/')
 dir.create(directory)
 dir.create(paste0(directory,'images/'))
 dir.create(paste0(directory,'logs/'))
+dir.create(paste0(directory,'results/'))
+
 write(paste0("Output directory: ",directory),stderr())
 
 if(is.null(opt$name_ground)){
@@ -397,7 +399,6 @@ if(opt$fillouts){
   
     ground_fillout_command <- paste0('bsub -J ',job_name,'_ground -e ',fillout_output_dir,'logs/',job_name,'_ground.err -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
                                    fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', ground_dir_norm,':', ground_dir_norm,' -B ', ground_dir_tumor,':',ground_dir_tumor, ' /juno/work/ccs/pintoa1/wrapper_pr/develop/get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --maq 20 --baq 20 --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',ground_tumor_bam,' ',normal,':',ground_normal_bam,' --output ',fillout_results_dir,opt$name_ground,'/',opt$name_ground,'_',sample,'_fillout.maf"' )
-    write(test_fillout_command,stderr())  
     system(test_fillout_command)
      
       system(ground_fillout_command)
@@ -425,7 +426,7 @@ if(!is.null(opt$bed_file)){
   df <- parse_dataframe_on_var(ground,test,'on_target','cohort')
   df <- df[,c('permission','type','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
   
-  write.table(df,paste0(directory,out_prefix,'_','on_target','_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
+  write.table(df,paste0(directory,'results/',out_prefix,'_','on_target','_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- df %>% filter(permission == 'restrictive')
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','bar',directory,out_prefix,opt)
@@ -452,7 +453,7 @@ if(!is.null(opt$bed_file)){
   sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
   
   
-  write.table(sample_level_df,paste0(directory,out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
+  write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- sample_level_df %>% filter(permission == 'restrictive')
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','boxplot',directory,out_prefix,opt)
@@ -469,12 +470,12 @@ if(!is.null(opt$bed_file)){
 
 overview_df <- calc_stats_by_variant_type(ground,test,'cohort')
 overview_df <- overview_df[,c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
-write.table(overview_df,paste0(directory,out_prefix,'_overview_all_variants_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
+write.table(overview_df,paste0(directory,'results/',out_prefix,'_overview_all_variants_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
 overview_df <- overview_df[overview_df$permission == 'restrictive',]
 
 
 if(opt$fillout_to_pr){
-  c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_overview_all_variants_performance_measures.txt'),header = TRUE)
+  c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_overview_all_variants_performance_measures.txt'),header = TRUE)
   c_df <- c_df[c_df$permission=='restrictive',]
   
   c_df$Genotyped <- 'Called'
@@ -497,7 +498,7 @@ variable_parsing_and_graph <- function(variable) {
   df <- parse_dataframe_on_var(ground,test,variable,'cohort')
   df <- df[,c('permission','type',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
   
-  write.table(df,paste0(directory,out_prefix,'_',variable,'_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
+  write.table(df,paste0(directory,'results/',out_prefix,'_',variable,'_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   
   
   
@@ -509,7 +510,7 @@ variable_parsing_and_graph <- function(variable) {
       } 
     } 
     if(opt$fillout_to_pr){
-      c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_',variable,'_cohort_performance_measures.txt'),header = TRUE)
+      c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_',variable,'_cohort_performance_measures.txt'),header = TRUE)
       c_df <- c_df %>% filter(permission == 'restrictive')
       if(variable != 'type'){
         if (any(c_df$type == 'all')) {
@@ -537,7 +538,6 @@ variable_parsing_and_graph <- function(variable) {
 }
 
 binned_vars <- plyr::adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = T)
-write("NUMBER 2",stderr())
 
 
 ############################################
@@ -569,15 +569,13 @@ na_sample_count <- ggplot(purity_nas,aes(x = purity_bin, y = n_samples)) + geom_
   scale_x_discrete(labels = levels(purity_nas[,'purity_bin']),drop=FALSE) + ylab("N Samples")
 
 if(opt$fillout_to_pr){
-  write(opt$called_director,stderr())
-  write(opt$called_out_prefix,stderr())
-  binned_vars_p <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_purity_bin_cohort_performance_measures.txt'), header = TRUE)
-  binned_vars_v <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_t_var_freq_bin_cohort_performance_measures.txt'), header = TRUE)
+
+  binned_vars_p <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_purity_bin_cohort_performance_measures.txt'), header = TRUE)
+  binned_vars_v <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_t_var_freq_bin_cohort_performance_measures.txt'), header = TRUE)
   binned_vars_p$Variable_ID <- 'called_purity'
   binned_vars_v$Frequency <- binned_vars_v$t_var_freq_bin
   binned_vars_p$Frequency <- binned_vars_p$purity_bin
   binned_vars_v$Variable_ID <- 'called_vaf'
-  write(colnames(binned_vars_v),stderr())
   shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','Variable_ID','Frequency')
   
   c_binned_vars <- rbind(binned_vars_p[,shared_cols],binned_vars_v[,shared_cols])
@@ -591,8 +589,7 @@ if(opt$fillout_to_pr){
   binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars)
  purity_nas$Variable_ID <- 'genotyped_purity'
  purity_nas$Genotyped <- "Genotyped"
- c_purity_nas <- c_binned_vars[grepl('N/A',c_binned_vars$purity_bin),]
- write.table(c_purity_nas,'testing_puritiy_nas_for_called.txt')
+ c_purity_nas <- binned_vars_p[grepl('N/A',binned_vars_p$purity_bin),] %>% filter(type == 'all') %>% filter(permission == 'restrictive')
  purity_nas <- rbind(c_purity_nas,purity_nas)
   
 }
@@ -616,8 +613,6 @@ na_precision_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'precision',]
   geom_errorbar(aes(ymin =lower, ymax = upper, width = 0)) + theme_classic() +theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
   scale_x_discrete(labels = unique(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Precision')  + labs(x=NULL)
 
-write("NUMBER 3",stderr())
-
 pgrid <- plot_grid(na_variant,vaf_mut_count,na_sample_count,pur_sample_count,na_recall_bin,recall_bin,na_precision_bin,precision_bin,ncol = 2, rel_widths = c(0.13,1),align = 'hv')
 x.grob <- textGrob("Frequency")
 pgrid <- grid.arrange(arrangeGrob(pgrid,bottom = x.grob))
@@ -640,8 +635,7 @@ if(opt$multiqc){
   if(opt$fillout_to_pr){
     shared_cols <- c(shared_cols, 'Genotyped')
   }
-  write(colnames(purity_nas),stderr())
-  write(colnames(binned_vars_pur),stderr())
+
   
   binned_vars_pur <- rbind(purity_nas[,shared_cols],binned_vars_pur[,shared_cols])
   restruct_for_multiqc(binned_vars_vaf,'VAF','cohort',opt$mq_dir)
@@ -654,7 +648,7 @@ if(!opt$fillouts){
     print(p)
   dev.off()
 }
-write("NUMBER 5",stderr())
+
 
 # ############################################
 
@@ -674,14 +668,13 @@ cols.nums <- c(seq(2,8,1),seq(10,12,1))
 sample_level_raw[cols.nums] <- lapply(sample_level_raw[cols.nums], as.numeric)
 sample_level_raw <- sample_level_raw[,c('permission','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
 
-write.table(sample_level_raw,paste0(directory,out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
+write.table(sample_level_raw,paste0(directory,'results/',out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
 sample_level_raw <- sample_level_raw[sample_level_raw$permission == 'restrictive',]
 if(!is.null(opt$called_directory)){
-  c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_sample_overview_performance_measures.txt'),header = TRUE)
+  c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_sample_overview_performance_measures.txt'),header = TRUE)
   c_df <- c_df[c_df$permission == 'restrictive',]
   c_df$Genotyped <- 'Called'
   sample_level_raw$Genotyped <- 'Genotyped'
-  write(colnames(sample_level_raw),stderr())
   df1 <- rbind(sample_level_raw,c_df)
 }
 if(!opt$fillouts){
@@ -710,7 +703,7 @@ variable_parsing_and_graph_sample <- function(variable) {
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
   sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
 
-  write.table(sample_level_df,paste0(directory,out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
+  write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   
   if(variable %nin% binned_variables){
     df1 <- sample_level_df %>% filter(permission == 'restrictive')
@@ -721,7 +714,7 @@ variable_parsing_and_graph_sample <- function(variable) {
      
     
       if(!is.null(opt$called_directory)){
-        c_df <- read.table(paste0(opt$called_directory,opt$called_out_prefix,'_',variable,'_sample_performance_measures.txt'),header = TRUE)
+        c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_',variable,'_sample_performance_measures.txt'),header = TRUE)
         c_df <- c_df %>% filter(permission == 'restrictive')
         c_df$Genotyped <- 'Called'
         df1$Genotyped <- 'Genotyped'
@@ -768,7 +761,7 @@ if(!opt$fillouts){
     dev.off()
     
   }
-  write('Number 5.8 ',stderr())
+
   
   pdf(paste0(directory,'images/',out_prefix,'_precision_recall_plot.pdf'))
   
@@ -778,7 +771,6 @@ if(!opt$fillouts){
   dev.off()
 }
 ############################################
-write('Number 6 ',stderr())
 
 ###### If Fillouts, check status of fillouts and wait for completion 
 is_job_still_running <- function(job_name) {
@@ -807,7 +799,6 @@ if (opt$fillouts){
   }
   
 
-  rscript_dir <- getwd()
   if(is.null(opt$bed_file)){
 
     system(paste0('bsub -J  collect_fillouts_results -e ',directory,'logs/',out_prefix,'_fillout_restructuring.err -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ))
@@ -823,17 +814,14 @@ if (opt$fillouts){
     test <- rbind(test,test_off)
   }
   if(opt$fillout_to_pr){
-  
-    write('Number 7 ',stderr())
     
     test <- test %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$detectable] , TRUE, FALSE))
     ground <- ground %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$detectable], TRUE, FALSE))
-    write('Number 8 ',stderr())
-    
+
     test <- test %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$evidence], TRUE, FALSE))
     ground <- ground %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$evidence], TRUE, FALSE))
     
-    
+    out_prefix <- str_replace(out_prefix,'fillout_','')
     
     
   } else{
@@ -842,7 +830,6 @@ if (opt$fillouts){
   }
   ground <- as.data.frame(unnest(ground, substitutions))
   test <- as.data.frame(unnest(test, substitutions))
-  write('Number 9 ',stderr())
   write.table(ground,paste0(directory,out_prefix,'_',opt$name_ground,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   write.table(test,paste0(directory,out_prefix,'_',opt$name_test,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   

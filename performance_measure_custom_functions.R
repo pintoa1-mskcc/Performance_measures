@@ -287,7 +287,7 @@ restruct_for_multiqc <- function(df,variable,level,directory){
   write("NUMBER 4.2225",stderr())
   
   if(any(colnames(df) == 'Genotyped')){
-    df[,variable] <- paste0(df[,variable],'_',df$Genotyped)
+    df[,variable] <- paste0(df[,variable],'/',df$Genotyped)
   }
   
   statistics_to_parse <- c('recall','precision','f1_Score','total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')
@@ -302,7 +302,7 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     
     tmp3$ID <- tmp3[,variable]
     if(any(colnames(df) == 'Genotyped')){
-      tmp3 <- tmp3 %>% separate(get(variable), c(variable, "Genotyped"), "_")
+      tmp3 <- tmp3 %>% separate(get(variable), c(variable, "Genotyped"), "/")
       write("NUMBER 4.9995",stderr())
       
       tmp3 <- tmp3[,c('ID',variable,'Genotyped','n_samples',statistics_to_parse)]
@@ -311,11 +311,11 @@ restruct_for_multiqc <- function(df,variable,level,directory){
       tmp3 <- tmp3[,c('ID',variable,'n_samples',statistics_to_parse)]
     }
   } else {
+    df$ID <- paste(df$Tumor_Sample_Barcode,df[,variable], sep = '/')
     
-    tmp <- pivot_wider(df[,c(variable,'Tumor_Sample_Barcode','statistic_name','value')], names_from = 'statistic_name', values_from = "value")
-    tmp2 <- unique(df[,c(variable,'total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')])
+    tmp <- pivot_wider(df[,c('ID','statistic_name','value')], names_from = 'statistic_name', values_from = "value")
+    tmp2 <- unique(df[,c('ID','total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')])
     tmp <- merge(tmp,tmp2)
-    tmp$ID <- paste(tmp$Tumor_Sample_Barcode,tmp[,variable], sep = '_')
     tmp3 <- tmp
    #  variables <- unique(tmp[,variable])
    #  names(variables) <- unique(tmp[,variable])
@@ -334,9 +334,10 @@ restruct_for_multiqc <- function(df,variable,level,directory){
    # }) 
 
     if(any(colnames(df) == 'Genotyped')){
-      tmp3 <- tmp3 %>% separate(get(variable), c(variable, "Genotyped"), "_")
+      tmp3 <- tmp3 %>% separate(ID, c('Tumor_Sample_Barcode',variable, "Genotyped"), "/",remove = FALSE)
       tmp3 <- tmp3[,c('ID','Tumor_Sample_Barcode',variable,'Genotyped',statistics_to_parse)]
     }else {
+      tmp3 <- tmp3 %>% separate(ID, c('Tumor_Sample_Barcode',variable), "/",remove = FALSE)
       tmp3 <- tmp3[,c('ID','Tumor_Sample_Barcode',variable,statistics_to_parse)]
     }
 
