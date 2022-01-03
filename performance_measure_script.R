@@ -430,6 +430,18 @@ if(!is.null(opt$bed_file)){
   if (any(df1$type == 'all')) {
     df1 <- df1 %>% filter(type == 'all')
   } 
+  
+  if(opt$fillout_to_pr){
+    c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_','on_target','_cohort_performance_measures.txt'),header = TRUE)
+    c_df <- c_df[c_df$permission=='restrictive',]
+    
+    c_df$Genotyped <- 'Called'
+    df1$Genotyped <- 'Genotyped'
+    
+    df1 <- rbind(df1,c_df)
+    
+    
+  }  
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','bar',directory,out_prefix,opt)
   
@@ -460,6 +472,17 @@ if(!is.null(opt$bed_file)){
   if (any(df1$type == 'all')) {
     df1 <- df1 %>% filter(type == 'all')
   } 
+  if(opt$fillout_to_pr){
+    c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_','on_target','_sample_performance_measures.txt'),header = TRUE)
+    c_df <- c_df[c_df$permission=='restrictive',]
+    
+    c_df$Genotyped <- 'Called'
+    df1$Genotyped <- 'Genotyped'
+    
+    df1 <- rbind(df1,c_df)
+    
+    
+  }  
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','boxplot',directory,out_prefix,opt)
     if(opt$multiqc){
@@ -606,11 +629,11 @@ binned_vars$Variable_ID <- as.character(binned_vars$Variable_ID)
 purity_nas$Variable_ID <- as.character(purity_nas$Variable_ID)
 colr_ids <- c(purity = "#374e55FF", vaf = "#DF8F44FF",genotyped_purity="#00A1D5FF",genotyped_vaf="#B24745FF",called_purity = "#374e55FF", called_vaf = "#DF8F44FF")
 colr_ids <- colr_ids[names(colr_ids) %in% binned_vars$Variable_ID]
-recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +  scale_color_manual(values=colr_ids) +
+recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='mean')  +  scale_color_manual(values=colr_ids) +
   geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
   scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1) + labs(x=NULL,y = NULL)
 
-precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +   scale_color_manual(values=colr_ids) +
+precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='mean')  +   scale_color_manual(values=colr_ids) +
   geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
   scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1)  + labs(x= NULL,y = NULL)
 
