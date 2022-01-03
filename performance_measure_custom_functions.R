@@ -338,7 +338,7 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     }
 
   }
-
+  write(variable,stderr())
   cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv'))
   write.table(tmp3,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE)
 
