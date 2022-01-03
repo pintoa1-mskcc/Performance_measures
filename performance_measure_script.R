@@ -434,9 +434,7 @@ if(!is.null(opt$bed_file)){
   
   write.table(df,paste0(directory,'results/',out_prefix,'_','on_target','_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- df %>% filter(permission == 'restrictive')
-  if (any(df1$type == 'all')) {
-    df1 <- df1 %>% filter(type == 'all')
-  } 
+
   
   if(opt$fillout_to_pr){
     c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_','on_target','_cohort_performance_measures.txt'),header = TRUE)
@@ -446,9 +444,14 @@ if(!is.null(opt$bed_file)){
     df1$Genotyped <- 'Genotyped'
     
     df1 <- rbind(df1,c_df)
-    
+    if (any(df1$type == 'all')) {
+      df1 <- df1 %>% filter(type == 'all')
+    } 
     
   }  
+  if (any(df1$type == 'all')) {
+    df1 <- df1 %>% filter(type == 'all')
+  } 
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','bar',directory,out_prefix,opt)
   
@@ -476,9 +479,7 @@ if(!is.null(opt$bed_file)){
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- sample_level_df %>% filter(permission == 'restrictive')
-  if (any(df1$type == 'all')) {
-    df1 <- df1 %>% filter(type == 'all')
-  } 
+
   if(opt$fillout_to_pr){
     c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_','on_target','_sample_performance_measures.txt'),header = TRUE)
     c_df <- c_df[c_df$permission=='restrictive',]
@@ -490,7 +491,9 @@ if(!is.null(opt$bed_file)){
     
     
   }  
-
+  if (any(df1$type == 'all')) {
+    df1 <- df1 %>% filter(type == 'all')
+  } 
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','boxplot',directory,out_prefix,opt)
     if(opt$multiqc){
