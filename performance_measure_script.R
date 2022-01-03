@@ -92,7 +92,6 @@ write(paste0("Run name: ",out_prefix),stderr())
 write(paste0("Ground file: ", opt$ground),stderr())
 write(paste0("Test file: ", opt$test),stderr())
 
-write(grepl("^/",opt$directory),stderr())
 directory <-  opt$directory <- ifelse(opt$directory == getwd(),paste0(opt$directory,'/'),ifelse(grepl("^/",opt$directory),opt$directory,paste0(getwd(),'/',opt$directory,'/')))
 dir.create(directory)
 dir.create(paste0(directory,'images/'))
@@ -583,7 +582,7 @@ if(opt$fillout_to_pr){
   binned_vars_p$Frequency <- binned_vars_p$purity_bin
   binned_vars_v$Variable_ID <- 'called_vaf'
   shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','Variable_ID','Frequency')
-  
+  write('NUM1',stderr())
   c_binned_vars <- rbind(binned_vars_p[,shared_cols],binned_vars_v[,shared_cols])
   
 
@@ -592,11 +591,14 @@ if(opt$fillout_to_pr){
   binned_vars <- binned_vars %>% mutate(Variable_ID =  factor(ifelse(!is.na(t_var_freq_bin),'genotyped_vaf',ifelse(!is.na(purity_bin),'genotyped_purity',NA)) ))
   c_binned_vars$Genotyped <- 'Called'
   binned_vars$Genotyped <- 'Genotyped'
-  binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars)
+  binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars[,c('Genotyped',shared_cols)])
+  write('NUM2',stderr())
+  
  purity_nas$Variable_ID <- 'genotyped_purity'
  purity_nas$Genotyped <- "Genotyped"
  c_purity_nas <- binned_vars_p[grepl('N/A',binned_vars_p$purity_bin),] %>% filter(type == 'all') %>% filter(permission == 'restrictive')
- purity_nas <- rbind(c_purity_nas,purity_nas)
+ purity_nas <- rbind(c_purity_nas[,c('Genotyped',shared_cols)],purity_nas[,c('Genotyped',shared_cols)])
+ write('NUM3',stderr())
   
 }
 binned_vars$Variable_ID <- as.character(binned_vars$Variable_ID)
