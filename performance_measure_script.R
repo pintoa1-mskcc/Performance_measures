@@ -200,7 +200,10 @@ if(!is.null(opt$bed)){
   bed_test <-  fread(paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed'),data.table = FALSE)
   ground <- ground %>% mutate(on_target = ifelse(bed_tag %in% bed_ground$V4, TRUE,FALSE))
   test <- test %>% mutate(on_target = ifelse(bed_tag %in% bed_test$V4, TRUE,FALSE))
-}
+  system(paste0("mv ",directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed', directory,'results/'))
+  system(paste0("mv ",directory,opt$out_prefix,'_',opt$name_Test,'_variant_locs.bed ', directory,'results/'))
+  
+  }
 
 
 
@@ -450,9 +453,6 @@ if(!is.null(opt$bed_file)){
     df1$Genotyped <- 'Genotyped'
     
     df1 <- rbind(df1,c_df)
-    if (any(df1$type == 'all')) {
-      df1 <- df1 %>% filter(type == 'all')
-    } 
     
   }  
   if (any(df1$type == 'all')) {
@@ -893,5 +893,5 @@ if(opt$multiqc){
   system(paste0("sed -i 's/Ground Name Not Provided/",opt$name_ground,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   system(paste0("sed -i 's/Test Name Not Provided/",opt$name_test,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   
-  system(paste0("bsub -J ",opt$out_prefix,"_multiqc -e ",directory,'/logs/',opt$out_prefix,'_multiqc -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B ',opt$mq_dir, ' multiqc-1.9.sif /bin/bash -c "multiqc ',  opt$mq_dir  ,' -c pr_mqc.yaml -o ',directory,' "'))
+  system(paste0("bsub -J ",opt$out_prefix,"_multiqc -e ",directory,'/logs/',opt$out_prefix,'_multiqc -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B ',opt$mq_dir, ' multiqc-1.9.sif /bin/bash -c "multiqc ',  opt$mq_dir  ,' -c ',opt$directory, opt$out_prefix,'_mqc.yaml -o ',directory,' "'))
 }

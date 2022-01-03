@@ -87,7 +87,8 @@ calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
 ## Df must which contain var_tag variable
 
 f1_stats <- function(ground_set,test_set,type_of_analysis){
-  n_samples <- length(unique(c(ground_set$Tumor_Sample_Barcode,test_set$Tumor_Sample_Barcode)))
+  n_samples <- length(unique(c(ground_set$Tumor_Sample_Barcode[ground_set$permission == 'restrictive'],test_set$Tumor_Sample_Barcode[ground_set$permission == 'restrictive'])))
+  
   stats <- do.call(rbind,lapply(c('restrictive','permissive'), function(permission){
 
     
