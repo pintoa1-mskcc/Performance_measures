@@ -97,7 +97,7 @@ if(opt$performance_measures) {
   write.table(fillex_test,test_file_name,quote = FALSE, row.names = FALSE,sep = "\t")
   name_test <- basename(opt$test_directory)
   name_ground <- basename(opt$ground_directory)
-  bsub_command <- paste0('bsub -e ', opt$directory,'logs/',opt$out_prefix, '_performance_measure_fillout.err -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -s ',name_test,'-n',name_ground, ' -c ', opt$directory,' -m TRUE -p TRUE -o fillout_', opt$out_prefix)
+  bsub_command <- paste0('bsub -e ', opt$directory,'logs/',opt$out_prefix, '_performance_measure_fillout.err -n 2 -R "rusage[mem=8]" -W 0:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -s ',name_test,'-n ',name_ground, ' -c ', opt$directory,' -m TRUE -p TRUE -o fillout_', opt$out_prefix)
   
   if(!is.null(opt$called_directory)){
     bsub_command <- paste0(bsub_command, ' -c ', opt$called_directory, ' -u ', opt$out_prefix)
