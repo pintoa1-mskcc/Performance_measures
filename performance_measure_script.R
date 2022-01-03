@@ -630,6 +630,7 @@ if(opt$fillout_to_pr){
   
  purity_nas$Variable_ID <- 'genotyped_purity'
  purity_nas$Genotyped <- "Genotyped"
+ binned_vars_p$Genotyped <- 'Called'
  shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','Variable_ID','purity_bin')
  
  c_purity_nas <- binned_vars_p[grepl('N/A',binned_vars_p$purity_bin),] %>% filter(type == 'all') %>% filter(permission == 'restrictive')
