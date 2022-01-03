@@ -42,7 +42,7 @@ parser$add_argument('-v','--additional_variables', type='character',  default = 
                     help= 'additional columns from MAFs which you would like to run recall and precision. This is a single value or a comma separated list if there is more than one')
 parser$add_argument("-o", "--out_prefix", type="character", default="date()",
               help="output file name basename [default= %default]")
-parser$add_argument('-f','--fillouts', type='logical', default = FALSE, action= "store",help = 'RUN fillouts')
+parser$add_argument('-f','--fillouts', type='logical', action='store_true',help = 'RUN fillouts')
 parser$add_argument('-e','--test_fillout_mapping', type='character',
                     default = NULL,
                     help = 'File containing BAM tumor/normal mapping for test set')
@@ -50,10 +50,10 @@ parser$add_argument('-r','--ground_fillout_mapping', type='character',
                     default = NULL, 
                     help = 'File containing BAM tumor/normal mapping for ground set')
 parser$add_argument('-b','--bed_file', type = 'character', default = NULL, help='BED file representing the intersection of the BED files used to generate ground and truth MAFs. If provided, tool will return a MAF for ground and test with each unique identifier and additional columns')
-parser$add_argument('-p', '--fillout_to_pr', type = 'logical',default = FALSE, help ='Logical stating whether or not fillouts has ALREADY  been performed.')
+parser$add_argument('-p', '--fillout_to_pr', type = 'logical',action='store_true', help ='Logical stating whether or not fillouts has ALREADY  been performed.')
 parser$add_argument('-c','--called_directory', type = 'character', default = NULL, help = 'Location of performance measure results on CALLED mutations (not genotyped). If provided, will generated statistics graphs for the combined results. Must be provided if using fillout_to_pr')
 parser$add_argument('-u','--called_out_prefix', type = 'character', default = NULL, help = 'Out prefix for performance measure called results If not provided, assumes the out_prefix provided is of form "fillout_%called_out_prefix%"')
-parser$add_argument('-m','--multiqc', type = 'logical', default = FALSE, help = 'Run multiqc after analysis. If you are running fillouts through this script, multiqc will automatically be run once genotyped analysis is complete.')
+parser$add_argument('-m','--multiqc', type = 'logical',action='store_true', help = 'Run multiqc after analysis. If you are running fillouts through this script, multiqc will automatically be run once genotyped analysis is complete.')
 
 opt=parser$parse_args()
 
