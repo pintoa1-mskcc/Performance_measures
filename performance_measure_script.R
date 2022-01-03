@@ -75,7 +75,7 @@ if(!is.null(opt$bed)){
 }
 
 if(opt$out_prefix == "date()"){
-  out_prefix <- str_replace_all(date()," ","_")
+  out_prefix <-  opt$out_prefix <- str_replace_all(date()," ","_")
 
 } else {
   out_prefix <- opt$out_prefix
@@ -93,7 +93,7 @@ write(paste0("Ground file: ", opt$ground),stderr())
 write(paste0("Test file: ", opt$test),stderr())
 
 
-directory <- paste0(opt$directory,'/')
+directory <- ifelse(opt$directory == getwd(),paste0(opt$directory,'/'),paste0(getwd(),'/',opt$directory,'/'))
 dir.create(directory)
 dir.create(paste0(directory,'images/'))
 dir.create(paste0(directory,'logs/'))
@@ -183,8 +183,8 @@ if(!is.null(opt$bed)){
                    check.zero.based = FALSE,
                    check.valid = FALSE,
                    check.sort = FALSE,
-                   check.merge = FALSE,outputFile =paste0(directory,'/',opt$out_prefix,'_',opt$name_test,'.bed'),verbose = TRUE))
-  bed_test <- paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed')
+                   check.merge = FALSE,outputFile = paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed'),verbose = TRUE))
+
   
   ground_bed <- ground[,c('Chromosome','Start_Position','End_Position','bed_tag')] 
   colnames(ground_bed) <- c('chr','start','end','names')
@@ -195,7 +195,7 @@ if(!is.null(opt$bed)){
             check.merge = FALSE,outputFile = paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),verbose = TRUE))
   
   bed_ground <- fread(paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),data.table = FALSE)
-  
+  bed_test <-  fread(paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed'),data.table = FALSE)
   ground <- ground %>% mutate(on_target = ifelse(bed_tag %in% bed_ground$V4, TRUE,FALSE))
   test <- test %>% mutate(on_target = ifelse(bed_tag %in% bed_test$V4, TRUE,FALSE))
 }
@@ -306,7 +306,7 @@ test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(share
     warning(paste0("For the purposes of this analysis, purity is set to the ",opt$name_ground," files purity values for accurate comparison. See 003.txt for samples which have differing purities between ", opt$name_ground, " and ", opt$name_test))
     testing_purity_maping <- test %>% distinct(Tumor_Sample_Barcode,purity_bin,purity)
     combined <- merge(tumor_sample_purity_mapping,testing_purity_maping,by="Tumor_Sample_Barcode",suffixes = c(opt$name_ground,opt$name_test))
-    write.table(combined[which(combined$purity_bin_ground != combined$purity_bin_test),],file=paste0(directory,'logs/003.txt'),quote = FALSE) 
+    write.table(combined[which(combined[,paste0('purity_bin',opt$name_ground)] != combined[,paste0('purity_bin',opt$name_ground)] ),],file=paste0(directory,'logs/003.txt'),quote = FALSE) 
     test <- left_join(test[,colnames(test) %nin% c("purity_bin",'purity')],tumor_sample_purity_mapping,by = "Tumor_Sample_Barcode")
   
 
@@ -428,6 +428,9 @@ if(!is.null(opt$bed_file)){
   
   write.table(df,paste0(directory,'results/',out_prefix,'_','on_target','_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- df %>% filter(permission == 'restrictive')
+  if (any(df1$type == 'all')) {
+    df1 <- df1 %>% filter(type == 'all')
+  } 
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','bar',directory,out_prefix,opt)
   
@@ -448,13 +451,16 @@ if(!is.null(opt$bed_file)){
   })
   
   sample_level_df <- do.call(rbind,sample_level_df)
-  cols.num <- c(seq(2,6,1),seq(8,10,1))
-  sample_level_df[cols.num] <- lapply(sample_level_df[cols.num], as.numeric)
+  cols.nums <- c(seq(2,8,1),seq(10,12,1))
+  sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
   sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
   
   
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- sample_level_df %>% filter(permission == 'restrictive')
+  if (any(df1$type == 'all')) {
+    df1 <- df1 %>% filter(type == 'all')
+  } 
   if(!opt$fillouts){
     statistics_graphs(df1,'on_target','boxplot',directory,out_prefix,opt)
     if(opt$multiqc){
