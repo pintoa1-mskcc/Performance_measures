@@ -101,6 +101,8 @@ custom_data:
       'type':
         title: "Variant Type"
         placement: 800
+      'Tumor_Sample_Barcode':
+	 placement: 700
       'Quantile':
         placement: 850
       'recall':
@@ -227,6 +229,8 @@ custom_data:
       'Genotyped':
         title: "Version"
         placement: 825
+      'Tumor_Sample_Barcode':
+         placement: 700
       'Quantile':
         placement: 850
       'recall':
@@ -287,6 +291,8 @@ custom_data:
       'Genotyped':
         title: "Version"
         placement: 825
+      'Tumor_Sample_Barcode':
+         placement: 700
       'substitutions':
         title: "Substitution"
         placement: 800
@@ -355,6 +361,8 @@ custom_data:
         placement: 800
       'Quantile':
         placement: 850
+      'Tumor_Sample_Barcode':
+         placement: 700
       'recall':
         title: "Recall"
         format: '{:,.3f}'
@@ -540,6 +548,8 @@ custom_data:
         placement: 800
       'Quantile':
         placement: 850
+      'Tumor_Sample_Barcode':
+         placement: 700
       'recall':
         title: "Recall"
         format: '{:,.3f}'
