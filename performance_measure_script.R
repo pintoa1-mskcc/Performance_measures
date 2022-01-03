@@ -93,7 +93,7 @@ write(paste0("Ground file: ", opt$ground),stderr())
 write(paste0("Test file: ", opt$test),stderr())
 
 
-directory <- ifelse(opt$directory == getwd(),paste0(opt$directory,'/'),paste0(getwd(),'/',opt$directory,'/'))
+directory <- ifelse(opt$directory == getwd(),paste0(opt$directory,'/'),ifelse(startsWith('/',opt$directory),opt$directory,paste0(getwd(),'/',opt$directory,'/')))
 dir.create(directory)
 dir.create(paste0(directory,'images/'))
 dir.create(paste0(directory,'logs/'))
