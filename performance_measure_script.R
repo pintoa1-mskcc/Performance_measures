@@ -242,11 +242,15 @@ test <- test  %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_P
                                                                "Translation_Start_Site",
                                                                "Splice_Site"), T, F)) 
 # Clonality must match to the ground values for accurate calculation of recall
+warning(paste0("For the purposes of this analysis, the shared variants clonality is set to the ",opt$name_ground," files' clonality values for accurate comparison."))
+
 shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
 test[match(shared_variants,test$var_tag),'clonality'] <- ground[match(shared_variants, ground$var_tag),'clonality']
 
 #Same assumption will hold for any additional variables
 for(variable in additional_variables){
+  warning(paste0("For the purposes of this analysis, the shared variants " ,variable , " is set to the ",opt$name_ground," file's ",variable, " values for accurate comparison."))
+  
   test[match(shared_variants,test$var_tag),variable] <- ground[match(shared_variants, ground$var_tag),variable]
   
 }
@@ -289,6 +293,8 @@ test$t_var_freq_bin <- cut(test$t_var_freq,
 
 # idnetify shared variants which have differing 't_var_freq_bin'
 # For purposes of recall, assume that ground t_var_freq_bins are the 'correct' variables so set those test values to that
+warning(paste0("For the purposes of this analysis, t_var_freq_bin is set to the ",opt$name_ground," files variant frequency bin values for accurate comparison."))
+
 test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(shared_variants, ground$var_tag),'t_var_freq_bin']
 
 
@@ -885,7 +891,7 @@ if (opt$fillouts){
 if(opt$multiqc){
   system(paste0("cp pr_mqc.yaml ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   system(paste0("sed -i 's/Ground Name Not Provided/",opt$name_ground,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
-  system(paste0("sed -i 's/Test Name Not Provided/",opt$name_ground,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
+  system(paste0("sed -i 's/Test Name Not Provided/",opt$name_test,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   
   system(paste0("bsub -J ",opt$out_prefix,"_multiqc -e ",directory,'/logs/',opt$out_prefix,'_multiqc -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B ',opt$mq_dir, ' multiqc-1.9.sif /bin/bash -c "multiqc ',  opt$mq_dir  ,' -c pr_mqc.yaml -o ',directory,' "'))
 }
