@@ -1,7 +1,16 @@
+library(argparse) 
 library(dplyr)
+opt = commandArgs(TRUE)
 
-bam_dir <- '/Users/apinto1/juno/work/tempo/wes_repo/Results/v1.4.x/cohort_level/CCS_NFCXOZVP/bams/'
-ccs_mapping <- read.table("../../fillout_testing/CCS_NFCXOZVP.cohort.txt",header = TRUE)
+parser=ArgumentParser()
+parser$add_argument("-b", "--bam_dir", type='character', default=NULL,
+                    help="Directory containing BAMS ")
+parser$add_argument("-m",'--mappping',type='character',default=NULL,help='Tumor-Normal mapping. Expected header format: TUMOR_ID /t NORMAL_ID')
+parser$add_argument("-o",'--output_file',type="character",default = NULL)
+opt=parser$parse_args()
+
+bam_dir <- opt$bam_dir
+ccs_mapping <- read.table(opt$mapping,header = TRUE)
 
 all_samples <- list.files(bam_dir)
 bams <- c()
@@ -14,4 +23,4 @@ ccs_mapping$TUMOR_BAM <- sapply(ccs_mapping$TUMOR_ID, function(id) {bams[grep(id
 ccs_mapping$NORMAL_BAM <- sapply(ccs_mapping$NORMAL_ID, function(id) {bams[grep(id,bams)]})
 colnames(ccs_mapping) <- tolower(colnames(ccs_mapping))
 
-write.table(ccs_mapping,'../develop/CCS_bam_mapping_for_fillouts.txt',sep = '\t',quote = FALSE)
+write.table(ccs_mapping,opt$output_file,sep = '\t',quote = FALSE)

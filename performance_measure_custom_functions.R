@@ -284,8 +284,7 @@ statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out,opt){
 }
 
 restruct_for_multiqc <- function(df,variable,level,directory){
-  write("NUMBER 4.2225",stderr())
-  
+
   if(any(colnames(df) == 'Genotyped')){
     df[,variable] <- paste0(df[,variable],'/',df$Genotyped)
   }
@@ -294,17 +293,14 @@ restruct_for_multiqc <- function(df,variable,level,directory){
   names(statistics_to_parse) <- statistics_to_parse
   
   if(level != 'sample'){
-    write("NUMBER 4.5",stderr())
     tmp <- pivot_wider(df[,c(variable,'statistic_name','value')], names_from = 'statistic_name', values_from = "value")
     tmp2 <- unique(df[,c(variable,'total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')])
     tmp3 <- merge(tmp,tmp2)
-    write("NUMBER 4.75",stderr())
-    
+
     tmp3$ID <- tmp3[,variable]
     if(any(colnames(df) == 'Genotyped')){
       tmp3 <- tmp3 %>% separate(get(variable), c(variable, "Genotyped"), "/")
-      write("NUMBER 4.9995",stderr())
-      
+
       tmp3 <- tmp3[,c('ID',variable,'Genotyped','n_samples',statistics_to_parse)]
       
     }else {
@@ -344,8 +340,6 @@ restruct_for_multiqc <- function(df,variable,level,directory){
   }
 
   cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv'))
-  write(str(tmp3),stderr())
   write.table(tmp3,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE)
-  write(paste0(variable,' COMPLETED CAT'),stderr())
-  
+
 }
