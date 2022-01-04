@@ -75,7 +75,7 @@ if(!is.null(opt$bed)){
 }
 
 if(opt$out_prefix == "date()"){
-  out_prefix <-  opt$out_prefix <- str_replace_all(Sys.time()," ","_")
+  out_prefix <-  opt$out_prefix <- str_replace_all(str_replace_all(Sys.time()," ","_"),'-','_')
 
 } else {
   out_prefix <- opt$out_prefix
