@@ -143,6 +143,141 @@ custom_data:
         title: 'False Negatives'
         format: '{:,.0f}'
         placement: 1250
+  on_target_bar:
+    id: "on_target_bar"
+    section_name: "On Target Cohort Plots"
+  on_target_boxplot:
+    id: "type_boxplot"
+    section_name: "On Target Sample Plots"
+  on_target_cohort:
+    parent_id: "target"
+    parent_name: "On Target Results"
+    parent_description: 'Performance measures for Variants On and Off Target'
+    file_format: 'tsv'
+    section_name: 'Cohort'
+    section_id: "on_target_cohort"
+    description: 'Overview of on target performance measures'
+    plot_type: 'table'
+    pconfig:
+      id: 'on_target_cohort'
+    headers:
+      'ground_set_no_ev_not_detect':
+        title: "Variants not detectable in Ground"
+        placement: 1350
+      'test_set_no_ev_not_detect':
+        title: "Variants not detectable in Test"
+        placement: 1300
+      'on_target':
+        title: "On Target"
+        placement: 850
+      'Genotyped':
+        title: "Version"
+        placement: 825
+      'recall':
+        title: "Recall"
+        format: '{:,.3f}'
+        max: 1
+        min: 0
+        placement: 1000
+      'precision':
+        title: "Precision"
+        format: '{:,.3f}'
+        max: 1
+        min: 0
+        placement:  950
+      'f1_Score':
+        title: "F1 Score"
+        format: '{:,.3f}'
+        max: 1
+        min: 0
+        placement: 900
+      'total_var_count':
+        title: "Total Mutations"
+        format: '{:,.0f}'
+        placement: 1050
+      'n_samples':
+        title: 'N Samples'
+        format: '{:,.0f}'
+        placement: 1100
+      'tps':
+        title: 'True Positives'
+        format: '{:,.0f}'
+        placement: 1150
+      'fps':
+        title: 'False Positives'
+        format: '{:,.0f}'
+        placement: 1200
+      'fns':
+        title: 'False Negatives'
+        format: '{:,.0f}'
+        placement: 1250
+
+  on_target_sample:
+    parent_id: "target"
+    parent_name: "On Target Results"
+    parent_description: 'Performance measures for On and Off Targets'
+    section_id: "on_target_sample"
+    file_format: 'tsv'
+    section_name: 'Sample'
+    description: 'Quantile results for On target variants'
+    plot_type: 'table'
+    pconfig:
+      id: 'on_target_sample'
+    headers:
+      'ground_set_no_ev_not_detect':
+        title: "Variants not detectable in Ground"
+        placement: 1350
+      'test_set_no_ev_not_detect':
+        title: "Variants not detectable in Test"
+        placement: 1300
+      'Genotyped':
+        title: "Version"
+        placement: 825
+      'on_target':
+        title: "On Target"
+        placement: 800
+      'Tumor_Sample_Barcode':
+        placement: 700
+      'Quantile':
+        placement: 850
+      'recall':
+        title: "Recall"
+        format: '{:,.3f}'
+        max: 1
+        min: 0
+        placement: 1000
+      'precision':
+        title: "Precision"
+        format: '{:,.3f}'
+        max: 1
+        min: 0
+        placement:  950
+      'f1_Score':
+        title: "F1 Score"
+        format: '{:,.3f}'
+        max: 1
+        min: 0
+        placement: 900
+      'total_var_count':
+        title: "Total Mutations"
+        format: '{:,.0f}'
+        placement: 1050
+      'n_samples':
+        title: 'N Samples'
+        format: '{:,.0f}'
+        placement: 1100
+      'tps':
+        title: 'True Positives'
+        format: '{:,.0f}'
+        placement: 1150
+      'fps':
+        title: 'False Positives'
+        format: '{:,.0f}'
+        placement: 1200
+      'fns':
+        title: 'False Negatives'
+        format: '{:,.0f}'
+        placement: 1250
   oncogenic_tf_cohort:
     parent_id: "Oncogenic"
     parent_name: "Oncogenic Results"
@@ -807,6 +942,9 @@ ignore_images: false
 
 custom_content:
   order:
+    - target
+    - on_target_bar
+    - on_target_boxplot
     - Type
     - type_bar
     - type_boxplot
