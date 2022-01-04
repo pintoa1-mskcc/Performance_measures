@@ -92,7 +92,7 @@ write(paste0("Run name: ",out_prefix),stderr())
 write(paste0("Ground file: ", opt$ground),stderr())
 write(paste0("Test file: ", opt$test),stderr())
 
-directory <-  opt$directory <- ifelse(opt$directory == getwd(),paste0(opt$directory,'/'),ifelse(grepl("^/",opt$directory),opt$directory,paste0(getwd(),'/',opt$directory,'/')))
+directory <-  opt$directory <- ifelse(opt$directory == getwd(),paste0(opt$directory,'/'),ifelse(grepl("^/",opt$directory),paste0(opt$directory,'/'),paste0(getwd(),'/',opt$directory,'/')))
 dir.create(directory)
 dir.create(paste0(directory,'images/'))
 dir.create(paste0(directory,'logs/'))
@@ -138,7 +138,6 @@ if(opt$fillout_to_pr){
     stop("If expecting combined results (fillout_to_pr == TRUE), must provide original directory.")
   }
 }
-write(unlist(opt), stderr())
 ############################################
 
 
