@@ -28,13 +28,13 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
   variable_id_stats <- lapply(levels_from_variable_id, function(id) {
     targeted_ground <- ground_df %>% filter(get(variable_id) == id) 
     targeted_test <- test_df %>% filter(get(variable_id) == id) 
-    if (length(unique(c(targeted_ground$Variant_Type,targeted_test$Variant_Type))) == 1) {
-      output <-f1_stats(targeted_ground,targeted_test,type_of_analysis)
-      output[variable_id] <- id
-      output['type'] <- unique(c(targeted_ground$Variant_Type,targeted_test$Variant_Type))
-      if(variable_id == 'substitutions'){
+    
+    if(variable_id == 'substitutions'){
+        output <-f1_stats(targeted_ground,targeted_test,type_of_analysis)
+        output[variable_id] <- id
+        output['type'] <- unique(c(targeted_ground$Variant_Type,targeted_test$Variant_Type))
         output <- output %>% filter(permission == 'restrictive')
-      }
+      
     } else {
       output <- calc_stats_by_variant_type(targeted_ground,targeted_test,type_of_analysis) 
       output[,variable_id] <- id
@@ -87,7 +87,7 @@ calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
 ## Df must which contain var_tag variable
 
 f1_stats <- function(ground_set,test_set,type_of_analysis){
-  n_samples <- length(unique(c(as.character(ground_set$Tumor_Sample_Barcode),as.character(test_set$Tumor_Sample_Barcode))))
+  n_samples <- length(unique(c(ground_set$Tumor_Sample_Barcode,test_set$Tumor_Sample_Barcode)))
   
   stats <- do.call(rbind,lapply(c('restrictive','permissive'), function(permission){
 
