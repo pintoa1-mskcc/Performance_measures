@@ -725,6 +725,9 @@ if(!is.null(opt$called_directory)){
   c_df <- c_df[c_df$permission == 'restrictive',]
   c_df$Genotyped <- 'Called'
   sample_level_raw$Genotyped <- 'Genotyped'
+  write(colnames(c_df),stderr())
+  write("WHATSUP",stderr())
+  write(colnames(df1),stderr())
   df1 <- rbind(df1,c_df)
 }
 if(!opt$fillouts){
@@ -747,6 +750,7 @@ variable_parsing_and_graph_sample <- function(variable) {
     }
     return(sample_level_stats)
   })
+  write(variable,stderr())
   
   sample_level_df <- do.call(rbind,sample_level_df)
   cols.nums <- c(seq(2,8,1),seq(10,12,1))
