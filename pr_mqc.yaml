@@ -2,9 +2,10 @@ title: "Performance Measures Analysis Report"
 report_header_info:
   - Contact E-mail: "pintoa1@mskcc.org"
   - Application Type: "Precision - Recall - F1 Stats"
-  - Project Type: "Analysis"
-  - Ground name: "Ground Name Not Provided"
-  - Test name: "Test Name Not Provided"
+  - Project Name: "Project Name Not Provided"
+    - Project Type: "Analysis"
+  - Ground Name: "Ground Name Not Provided"
+  - Test Name: "Test Name Not Provided"
 
 
 custom_data:

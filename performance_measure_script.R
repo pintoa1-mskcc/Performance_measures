@@ -31,29 +31,29 @@ opt = commandArgs(TRUE)
 
 parser=ArgumentParser()
 parser$add_argument("-g", "--ground", type='character', default=NULL,
-                    help="ground truth MAF file ")
-parser$add_argument('-n','--name_ground', type = 'character', default = NULL, help='optional, name of ground cohort')
+                    help="REQUIRED. ground truth MAF file ")
+parser$add_argument('-n','--name_ground', type = 'character', default = NULL, help='opTIONAL, name of ground cohort')
 parser$add_argument("-t", "--test", type='character',  default=NULL,
-                    help="test MAF file ")
-parser$add_argument('-s','--name_test', type = 'character', default = NULL, help='optional, name of test cohort')
+                    help="REQUIRED. test MAF file ")
+parser$add_argument('-s','--name_test', type = 'character', default = NULL, help='OPTIONAL, name of test cohort')
 parser$add_argument('-d','--directory', type='character', default = getwd(),
-                    help='output directory [default = current working directory ]')
+                    help='OPTIONAL output directory [default = current working directory ]')
 parser$add_argument('-v','--additional_variables', type='character',  default = NULL,
-                    help= 'additional columns from MAFs which you would like to run recall and precision. This is a single value or a comma separated list if there is more than one. Additional vars MUST be categorical')
+                    help= 'OPTIONAL dditional columns from MAFs which you would like to run recall and precision. This is a single value or a comma separated list if there is more than one. Additional vars MUST be categorical')
 parser$add_argument("-o", "--out_prefix", type="character", default="date()",
-              help="output file name basename [default= %default]")
-parser$add_argument('-f','--fillouts', action='store_true',help = 'RUN fillouts')
+              help="Optional. output file name basename [default= Sys.time()]")
+parser$add_argument('-f','--fillouts', action='store_true',help = 'Optional. RUN fillouts')
 parser$add_argument('-e','--test_fillout_mapping', type='character',
                     default = NULL,
-                    help = 'File containing BAM tumor/normal mapping for test set')
+                    help = 'REQUIRED for fillouts mode. File containing BAM tumor/normal mapping for test set. ')
 parser$add_argument('-r','--ground_fillout_mapping', type='character',
                     default = NULL, 
-                    help = 'File containing BAM tumor/normal mapping for ground set')
+                    help = 'REQUIRED for fillouts mode. File containing BAM tumor/normal mapping for ground set.')
 parser$add_argument('-b','--bed_file', type = 'character', default = NULL, help='BED file representing the intersection of the BED files used to generate ground and truth MAFs. If provided, tool will return a MAF for ground and test with each unique identifier and additional columns')
 parser$add_argument('-p', '--fillout_to_pr',action='store_true', help ='Logical stating whether or not fillouts has ALREADY  been performed.')
-parser$add_argument('-c','--called_directory', type = 'character', default = NULL, help = 'Location of performance measure results on CALLED mutations (not genotyped). If provided, will generated statistics graphs for the combined results. Must be provided if using fillout_to_pr')
-parser$add_argument('-u','--called_out_prefix', type = 'character', default = NULL, help = 'Out prefix for performance measure called results If not provided, assumes the out_prefix provided is of form "fillout_%called_out_prefix%"')
-parser$add_argument('-m','--multiqc',action='store_true', help = 'Run multiqc after analysis. If you are running fillouts through this script, multiqc will automatically be run once genotyped analysis is complete.')
+parser$add_argument('-c','--called_directory', type = 'character', default = NULL, help = ' REQUIRED for fillout_to_pr mode.Location of performance measure results on CALLED mutations (not genotyped). If provided, will generated statistics graphs for the combined results.')
+parser$add_argument('-u','--called_out_prefix', type = 'character', default = NULL, help = 'OPTIONAL for fillout_to_pr mode. Out prefix for performance measure called results. If not provided, assumes the out_prefix provided is of form "fillout_%called_out_prefix%"')
+parser$add_argument('-m','--multiqc',action='store_true', help = 'OPTIONAL. Run multiqc after analysis. If you are running fillouts through this script, multiqc will automatically be run once genotyped analysis is complete.')
 
 opt=parser$parse_args()
 
@@ -179,6 +179,7 @@ if(!is.null(opt$bed)){
   test_bed <- test[,c('Chromosome','Start_Position','End_Position','bed_tag')] 
   colnames(test_bed) <- c('chr','start','end','names')
   
+  warning("The following errors are expected for versions 4.0+ of R")
   ### BEDR CURRENTLY HAS A BUG FOR R VERSION 4.0 and BEYOND. IT WILL SAVE THE OUTPUT FILE FINE, BUT IS INCAPABLE OF SAVING AS AN R OBJECT (appears to attempt to concatinate colnames for bed and test_bed, then returns only 4 columns. erroring colnames() attempt. )
   try(bedr(engine = 'bedtools', input = list(a = test_bed, b = bed), method = "intersect", params = ' -wa ', check.chr = TRUE,
                    check.zero.based = FALSE,
@@ -631,8 +632,7 @@ if(opt$fillout_to_pr){
   c_binned_vars$Genotyped <- 'Called'
   binned_vars$Genotyped <- 'Genotyped'
   binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars[,c('Genotyped',shared_cols)])
-  write('NUM2',stderr())
-  
+
  purity_nas$Variable_ID <- 'genotyped_purity'
  purity_nas$Genotyped <- "Genotyped"
  binned_vars_p$Genotyped <- 'Called'
@@ -640,8 +640,7 @@ if(opt$fillout_to_pr){
  
  c_purity_nas <- binned_vars_p[grepl('N/A',binned_vars_p$purity_bin),] %>% filter(type == 'all') %>% filter(permission == 'restrictive')
  purity_nas <- rbind(c_purity_nas[,c('Genotyped',shared_cols)],purity_nas[,c('Genotyped',shared_cols)])
- write('NUM3',stderr())
-  
+
 }
 binned_vars$Variable_ID <- as.character(binned_vars$Variable_ID)
 
@@ -890,6 +889,7 @@ if (opt$fillouts){
 }
 if(opt$multiqc){
   system(paste0("cp pr_mqc.yaml ",opt$directory, opt$out_prefix,"_mqc.yaml"))
+  system(paste0("sed -i 's/Project Name Not Provided",opt$out_prefix,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   system(paste0("sed -i 's/Ground Name Not Provided/",opt$name_ground,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   system(paste0("sed -i 's/Test Name Not Provided/",opt$name_test,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   
