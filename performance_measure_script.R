@@ -773,6 +773,7 @@ variable_parsing_and_graph_sample <- function(variable) {
             c_df <- c_df %>% filter(type == 'all')
           } 
         } 
+        write(variable,stderr())
         df1 <- rbind(df1,c_df)
       }
       
