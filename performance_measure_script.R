@@ -50,7 +50,7 @@ parser$add_argument('-r','--ground_fillout_mapping', type='character',
                     default = NULL, 
                     help = 'REQUIRED for fillouts mode. File containing BAM tumor/normal mapping for ground set.')
 parser$add_argument('-b','--bed_file', type = 'character', default = NULL, help='BED file representing the intersection of the BED files used to generate ground and truth MAFs. If provided, tool will return a MAF for ground and test with each unique identifier and additional columns')
-parser$add_argument('-p', '--fillout_to_pr',action='store_true', help ='Logical stating whether or not fillouts has ALREADY  been performed.')
+parser$add_argument('-p', '--fillout_to_pr',action='store_true', help ='Logical stating whether or not fillouts has ALREADY  been performed.Assumes this script has already been run on called mutations.')
 parser$add_argument('-c','--called_directory', type = 'character', default = NULL, help = ' REQUIRED for fillout_to_pr mode.Location of performance measure results on CALLED mutations (not genotyped). If provided, will generated statistics graphs for the combined results.')
 parser$add_argument('-u','--called_out_prefix', type = 'character', default = NULL, help = 'OPTIONAL for fillout_to_pr mode. Out prefix for performance measure called results. If not provided, assumes the out_prefix provided is of form "fillout_%called_out_prefix%"')
 parser$add_argument('-m','--multiqc',action='store_true', help = 'OPTIONAL. Run multiqc after analysis. If you are running fillouts through this script, multiqc will automatically be run once genotyped analysis is complete.')
@@ -889,7 +889,7 @@ if (opt$fillouts){
 }
 if(opt$multiqc){
   system(paste0("cp pr_mqc.yaml ",opt$directory, opt$out_prefix,"_mqc.yaml"))
-  system(paste0("sed -i 's/Project Name Not Provided",opt$out_prefix,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
+  system(paste0("sed -i 's/Project Name Not Provided/",opt$out_prefix,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   system(paste0("sed -i 's/Ground Name Not Provided/",opt$name_ground,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   system(paste0("sed -i 's/Test Name Not Provided/",opt$name_test,"/g' ",opt$directory, opt$out_prefix,"_mqc.yaml"))
   
