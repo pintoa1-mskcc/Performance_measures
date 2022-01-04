@@ -75,7 +75,7 @@ if(!is.null(opt$bed)){
 }
 
 if(opt$out_prefix == "date()"){
-  out_prefix <-  opt$out_prefix <- str_replace_all(date()," ","_")
+  out_prefix <-  opt$out_prefix <- str_replace_all(Sys.time()," ","_")
 
 } else {
   out_prefix <- opt$out_prefix
@@ -721,12 +721,13 @@ sample_level_raw <- sample_level_raw[,c('permission','type','Tumor_Sample_Barcod
 
 write.table(sample_level_raw,paste0(directory,'results/',out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
 sample_level_raw <- sample_level_raw[sample_level_raw$permission == 'restrictive',]
+df1 <- sample_level_raw
 if(!is.null(opt$called_directory)){
   c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_sample_overview_performance_measures.txt'),header = TRUE)
   c_df <- c_df[c_df$permission == 'restrictive',]
   c_df$Genotyped <- 'Called'
   sample_level_raw$Genotyped <- 'Genotyped'
-  df1 <- rbind(sample_level_raw,c_df)
+  df1 <- rbind(df1,c_df)
 }
 if(!opt$fillouts){
   statistics_graphs(df1,'type','boxplot',directory,out_prefix,opt)
