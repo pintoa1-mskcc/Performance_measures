@@ -724,10 +724,8 @@ if(!is.null(opt$called_directory)){
   c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_sample_overview_performance_measures.txt'),header = TRUE)
   c_df <- c_df[c_df$permission == 'restrictive',]
   c_df$Genotyped <- 'Called'
-  sample_level_raw$Genotyped <- 'Genotyped'
-  write(colnames(c_df),stderr())
-  write("WHATSUP",stderr())
-  write(colnames(df1),stderr())
+  df1$Genotyped <- 'Genotyped'
+
   df1 <- rbind(df1,c_df)
 }
 if(!opt$fillouts){
