@@ -32,7 +32,7 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
     if(variable_id == 'substitutions'){
         output <-f1_stats(targeted_ground,targeted_test,type_of_analysis)
         output[variable_id] <- id
-        output['type'] <- unique(c(targeted_ground$Variant_Type,targeted_test$Variant_Type))
+        output['type'] <- 'SNV'
         output <- output %>% filter(permission == 'restrictive')
       
     } else {
@@ -50,7 +50,7 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
 }
 
 calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
-  variant_types <- c('all',unique(ground$type,test$type))
+  variant_types <- c('all',unique(ground$Variant_Type,test$Variant_Type))
   output1 <- lapply(variant_types, function(type) {
     
     if(type == 'all'){
