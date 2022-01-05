@@ -50,7 +50,7 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
 }
 
 calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
-  variant_types <- c('all','SNV','indel','INS','DEL')
+  variant_types <- c('all',unique(ground$type,test$type))
   output1 <- lapply(variant_types, function(type) {
     
     if(type == 'all'){
