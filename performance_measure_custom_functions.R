@@ -28,7 +28,6 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
   variable_id_stats <- lapply(levels_from_variable_id, function(id) {
     targeted_ground <- ground_df %>% filter(get(variable_id) == id) 
     targeted_test <- test_df %>% filter(get(variable_id) == id) 
-    
     if(variable_id == 'substitutions'){
         output <-f1_stats(targeted_ground,targeted_test,type_of_analysis)
         output[variable_id] <- id
@@ -52,7 +51,7 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
 calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
   variant_types <- unique(c('all','indel',ground$Variant_Type,test$Variant_Type))
   output1 <- lapply(variant_types, function(type) {
-
+    
     if(type == 'all'){
       targ_g <- ground
       targ_t <- test
@@ -97,24 +96,24 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
       ground_set_must <- ground_set[!ground_set$evidence & ground_set$detectable,]
       
       if(permission == 'restrictive'){
-        tps <- length(ground_set$var_tag[ground_set$evidence & ground_set$var_tag %in% test_set$var_tag])
+        tps <- length(ground_set$var_tag[ground_set$var_tag[ground_set$evidence] %in% test_set$var_tag[test_set$evidence]])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- ground_set$var_tag[ground_set$evidence & ground_set$var_tag  %nin% test_set$var_tag]
-        test_set_no_ev_not_detect <- length(test_set[!test_set$evidence & !test_set$detectable,'var_tag'])
+        fns <- ground_set$var_tag[ground_set$var_tag[ground_set$evidence]  %nin% test_set$var_tag[test_set$evidence]]
+        test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$var_tag)])
         fns <- length(fns[which(fns %in% test_set_must$var_tag)])
         
         ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- test_set$var_tag[test_set$evidence & test_set$var_tag %nin% ground_set$var_tag]
+        fps <- test_set$var_tag[test_set$var_tag[test_set$evidence]  %nin% ground_set$var_tag[ground_set$evidence]]
         ground_set_no_ev_not_detect <- length(fps[which(fps %nin% ground_set_must$var_tag)])
         
         fps <- length(fps[which(fps %in% ground_set_must$var_tag)])
         
       } else {
-        tps <- length(unique(ground_set$TAG[ground_set$evidence & ground_set$TAG %in% test_set$TAG]))
+        tps <- length(ground_set$TAG[ground_set$TAG[ground_set$evidence] %in% test_set$TAG[test_set$evidence]])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- unique(ground_set$TAG[ground_set$TAG[ground_set$evidence]  %nin% test_set$TAG[test_set$evidence]])
+        fns <- ground_set$TAG[ground_set$TAG[ground_set$evidence]  %nin% test_set$TAG[test_set$evidence]]
         test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$TAG)])
         fns <- length(fns[which(fns %in% test_set_must$TAG)])
         
