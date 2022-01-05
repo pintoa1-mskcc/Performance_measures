@@ -116,14 +116,14 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
         tps <- length(ground_set$TAG[ground_set$TAG[ground_set$evidence] %in% test_set$TAG[test_set$evidence]])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- ground_set$TAG[ground_set$TAG[ground_set$evidence]  %nin% test_set$TAG[test_set$evidence]]
+        fns <- ground_set$TAG[ground_set$evidence && ground_set$TAG[ground_set$evidence]  %nin% test_set$TAG[test_set$evidence]]
         test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$TAG)])
        
         
         fns <- length(fns[which(fns %in% test_set_must$TAG)])
         
         ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- test_set$TAG[test_set$TAG[test_set$evidence]  %nin% ground_set$TAG[ground_set$evidence]]
+        fps <- test_set$TAG[test_set$evidence && test_set$TAG[test_set$evidence]  %nin% ground_set$TAG[ground_set$evidence]]
         ground_set_no_ev_not_detect <- length(fps[which(fps %nin% ground_set_must$TAG)])
         fps <- length(fps[which(fps %in% ground_set_must$TAG)])
       }
