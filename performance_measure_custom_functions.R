@@ -112,6 +112,7 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
         ground_set_no_ev_not_detect <- length(ground_set[!ground_set$evidence & !ground_set$detectable,'var_tag'])
 
       } else {
+        tps <- length(unique(ground_set_true_pos$TAG[ ground_set_true_pos$var_tag %in% test_set_true_pos$TAG]))
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
         fns <- length(unique(ground_set_true_pos$TAG[ ground_set_true_pos$TAG  %in% test_set_true_neg$TAG]))
