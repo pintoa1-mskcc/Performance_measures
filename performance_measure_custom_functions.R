@@ -52,8 +52,7 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
 calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
   variant_types <- unique(c('all','indel',ground$Variant_Type,test$Variant_Type))
   output1 <- lapply(variant_types, function(type) {
-    write(type,stderr())
-    
+
     if(type == 'all'){
       targ_g <- ground
       targ_t <- test
@@ -97,33 +96,35 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
     if(any(c(colnames(ground_set),colnames(test_set)) == 'detectable')){
       test_set_must <- test_set[!test_set$evidence & test_set$detectable,]
       ground_set_must <- ground_set[!ground_set$evidence & ground_set$detectable,]
+      ground_set_ev <- ground_set[ground_set$evidence,]
+      test_set_ev <- test_set_[test_set_$evidence,]
       
       if(permission == 'restrictive'){
-        tps <- length(ground_set$var_tag[ground_set$evidence && ground_set$var_tag[ground_set$evidence] %in% test_set$var_tag[test_set$evidence]])
+        tps <- length(ground_set_ev$var_tag[ ground_set_ev$var_tag %in% test_set_ev$var_tag])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- ground_set$var_tag[ground_set$evidence  && ground_set$var_tag[ground_set$evidence]  %nin% test_set$var_tag[test_set$evidence]]
+        fns <- ground_set_ev$var_tag[ ground_set_ev$var_tag  %nin% test_set_ev$var_tag]
         test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$var_tag)])
         fns <- length(fns[which(fns %in% test_set_must$var_tag)])
         
         ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- test_set$var_tag[test_set$evidence && test_set$var_tag[test_set$evidence]  %nin% ground_set$var_tag[ground_set$evidence]]
+        fps <- test_set_ev$var_tag[test_set_ev$var_tag  %nin% ground_set_ev$var_tag]
         ground_set_no_ev_not_detect <- length(fps[which(fps %nin% ground_set_must$var_tag)])
         
         fps <- length(fps[which(fps %in% ground_set_must$var_tag)])
         
       } else {
-        tps <- length(ground_set$TAG[ground_set$TAG[ground_set$evidence] %in% test_set$TAG[test_set$evidence]])
+        tps <- length(ground_set_ev$TAG[ground_set_ev$TAG %in% test_set_ev$TAG])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- ground_set$TAG[ground_set$evidence && ground_set$TAG[ground_set$evidence]  %nin% test_set$TAG[test_set$evidence]]
+        fns <- ground_set_ev$TAG[ground_set_ev$TAG  %nin% test_set_ev$TAG]
         test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$TAG)])
        
         
         fns <- length(fns[which(fns %in% test_set_must$TAG)])
         
         ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- test_set$TAG[test_set$evidence && test_set$TAG[test_set$evidence]  %nin% ground_set$TAG[ground_set$evidence]]
+        fps <- test_set_ev$TAG[test_set_ev$TAG  %nin% ground_set_ev$TAG]
         ground_set_no_ev_not_detect <- length(fps[which(fps %nin% ground_set_must$TAG)])
         fps <- length(fps[which(fps %in% ground_set_must$TAG)])
       }
@@ -342,7 +343,6 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     }
 
   }
-  write(variable,stderr())
   cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv'))
   write.table(tmp3,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE)
 
