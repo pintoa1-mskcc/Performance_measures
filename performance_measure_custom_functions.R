@@ -94,39 +94,33 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
     
     # If fillouts has been run, (detectable present), ensure opposing set is detectable at that location 
     if(any(c(colnames(ground_set),colnames(test_set)) == 'detectable')){
-      test_set_must <- test_set[!test_set$evidence & test_set$detectable,]
-      ground_set_must <- ground_set[!ground_set$evidence & ground_set$detectable,]
-      ground_set_ev <- ground_set[ground_set$evidence,]
-      test_set_ev <- test_set[test_set$evidence,]
+      test_set_true_neg <- test_set[!test_set$evidence & test_set$detectable,]
+      ground_set_true_neg <- ground_set[!ground_set$evidence & ground_set$detectable,]
+      
+      ground_set_true_pos <- ground_set[ground_set$evidence,]
+      test_set_true_pos <- test_set[test_set$evidence,]
       
       if(permission == 'restrictive'){
-        tps <- length(ground_set_ev$var_tag[ ground_set_ev$var_tag %in% test_set_ev$var_tag])
+        tps <- length(ground_set_true_pos$var_tag[ ground_set_true_pos$var_tag %in% test_set_true_pos$var_tag])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- ground_set_ev$var_tag[ ground_set_ev$var_tag  %nin% test_set_ev$var_tag]
-        test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$var_tag)])
-        fns <- length(fns[which(fns %in% test_set_must$var_tag)])
-        
+        fns <- length(ground_set_true_pos$var_tag[ ground_set_true_pos$var_tag  %in% test_set_true_neg$var_tag])
+        test_set_no_ev_not_detect <- length(test_set[!test_set$evidence & !test_set$detectable,'var_tag'])
+
         ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- test_set_ev$var_tag[test_set_ev$var_tag  %nin% ground_set_ev$var_tag]
-        ground_set_no_ev_not_detect <- length(fps[which(fps %nin% ground_set_must$var_tag)])
-        
-        fps <- length(fps[which(fps %in% ground_set_must$var_tag)])
-        
+        fps <- length(test_set_true_pos$var_tag[test_set_true_pos$var_tag  %in% ground_set_true_neg$var_tag])
+        ground_set_no_ev_not_detect <- length(ground_set[!ground_set$evidence & !ground_set$detectable,'var_tag'])
+
       } else {
-        tps <- length(ground_set_ev$TAG[ground_set_ev$TAG %in% test_set_ev$TAG])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- ground_set_ev$TAG[ground_set_ev$TAG  %nin% test_set_ev$TAG]
-        test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$TAG)])
-       
-        
-        fns <- length(fns[which(fns %in% test_set_must$TAG)])
+        fns <- length(unique(ground_set_true_pos$TAG[ ground_set_true_pos$TAG  %in% test_set_true_neg$TAG]))
+        test_set_no_ev_not_detect <- length(unque(test_set[!test_set$evidence & !test_set$detectable,'TAG']))
         
         ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- test_set_ev$TAG[test_set_ev$TAG  %nin% ground_set_ev$TAG]
-        ground_set_no_ev_not_detect <- length(fps[which(fps %nin% ground_set_must$TAG)])
-        fps <- length(fps[which(fps %in% ground_set_must$TAG)])
+        fps <- length(unique(test_set_true_pos$TAG[test_set_true_pos$TAG  %in% ground_set_true_neg$TAG]))
+        ground_set_no_ev_not_detect <- length(unique(ground_set[!ground_set$evidence & !ground_set$detectable,'TAG']))
+        
       }
       
     } else{
@@ -134,8 +128,8 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
         test_set_tags <- test_set$var_tag
         ground_set_tags <- ground_set$var_tag
       } else {
-        test_set_tags <- test_set$TAG
-        ground_set_tags <- ground_set$TAG
+        test_set_tags <- unique(test_set$TAG)
+        ground_set_tags <- unique(ground_set$TAG)
       }
       
       
