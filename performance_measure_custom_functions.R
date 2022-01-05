@@ -97,7 +97,7 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
       test_set_must <- test_set[!test_set$evidence & test_set$detectable,]
       ground_set_must <- ground_set[!ground_set$evidence & ground_set$detectable,]
       ground_set_ev <- ground_set[ground_set$evidence,]
-      test_set_ev <- test_set_[test_set_$evidence,]
+      test_set_ev <- test_set[test_set$evidence,]
       
       if(permission == 'restrictive'){
         tps <- length(ground_set_ev$var_tag[ ground_set_ev$var_tag %in% test_set_ev$var_tag])
