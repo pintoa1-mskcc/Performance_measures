@@ -147,7 +147,7 @@ custom_data:
     id: "on_target_bar"
     section_name: "On Target Cohort Plots"
   on_target_boxplot:
-    id: "type_boxplot"
+    id: "on_target_boxplot"
     section_name: "On Target Sample Plots"
   on_target_cohort:
     parent_id: "target"
