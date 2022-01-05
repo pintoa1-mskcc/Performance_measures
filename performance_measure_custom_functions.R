@@ -87,61 +87,60 @@ calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
 ## Df must which contain var_tag variable
 
 f1_stats <- function(ground_set,test_set,type_of_analysis){
-  n_samples <- length(unique(c(ground_set$Tumor_Sample_Barcode,test_set$Tumor_Sample_Barcode)))
-  
+  n_samples <- length(unique(c(truth_set$Tumor_Sample_Barcode,test_set$Tumor_Sample_Barcode)))
   stats <- do.call(rbind,lapply(c('restrictive','permissive'), function(permission){
-
+    
     
     # If fillouts has been run, (detectable present), ensure opposing set is detectable at that location 
-    if(any(c(colnames(ground_set),colnames(test_set)) == 'detectable')){
-      test_set_true_neg <- test_set[!test_set$evidence & test_set$detectable,]
-      ground_set_true_neg <- ground_set[!ground_set$evidence & ground_set$detectable,]
-      
-      ground_set_true_pos <- ground_set[ground_set$evidence,]
-      test_set_true_pos <- test_set[test_set$evidence,]
+    if(any(c(colnames(truth_set),colnames(test_set)) == 'detectable')){
+      test_set_must <- test_set[!test_set$evidence & test_set$detectable,]
+      truth_set_must <- truth_set[!truth_set$evidence & truth_set$detectable,]
       
       if(permission == 'restrictive'){
-        tps <- length(ground_set_true_pos$var_tag[ ground_set_true_pos$var_tag %in% test_set_true_pos$var_tag])
+        tps <- length(truth_set$var_tag[truth_set$var_tag[truth_set$evidence] %in% test_set$var_tag[test_set$evidence]])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- length(ground_set_true_pos$var_tag[ ground_set_true_pos$var_tag  %in% test_set_true_neg$var_tag])
-        test_set_no_ev_not_detect <- length(test_set[!test_set$evidence & !test_set$detectable,'var_tag'])
-
-        ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- length(test_set_true_pos$var_tag[test_set_true_pos$var_tag  %in% ground_set_true_neg$var_tag])
-        ground_set_no_ev_not_detect <- length(ground_set[!ground_set$evidence & !ground_set$detectable,'var_tag'])
-
+        fns <- truth_set$var_tag[truth_set$var_tag[truth_set$evidence]  %nin% test_set$var_tag[test_set$evidence]]
+        test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$var_tag)])
+        fns <- length(fns[which(fns %in% test_set_must$var_tag)])
+        
+        ## Remove variants from count if truth_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
+        fps <- test_set$var_tag[test_set$var_tag[test_set$evidence]  %nin% truth_set$var_tag[truth_set$evidence]]
+        truth_set_no_ev_not_detect <- length(fps[which(fps %nin% truth_set_must$var_tag)])
+        
+        fps <- length(fps[which(fps %in% truth_set_must$var_tag)])
+        
       } else {
-        tps <- length(unique(ground_set_true_pos$TAG[ ground_set_true_pos$var_tag %in% test_set_true_pos$TAG]))
+        tps <- length(truth_set$TAG[truth_set$TAG[truth_set$evidence] %in% test_set$TAG[test_set$evidence]])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- length(unique(ground_set_true_pos$TAG[ ground_set_true_pos$TAG  %in% test_set_true_neg$TAG]))
-        test_set_no_ev_not_detect <- length(unique(test_set[!test_set$evidence & !test_set$detectable,'TAG']))
+        fns <- truth_set$TAG[truth_set$TAG[truth_set$evidence]  %nin% test_set$TAG[test_set$evidence]]
+        test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$TAG)])
+        fns <- length(fns[which(fns %in% test_set_must$TAG)])
         
-        ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- length(unique(test_set_true_pos$TAG[test_set_true_pos$TAG  %in% ground_set_true_neg$TAG]))
-        ground_set_no_ev_not_detect <- length(unique(ground_set[!ground_set$evidence & !ground_set$detectable,'TAG']))
-        
+        ## Remove variants from count if truth_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
+        fps <- test_set$TAG[test_set$TAG[test_set$evidence]  %nin% truth_set$TAG[truth_set$evidence]]
+        truth_set_no_ev_not_detect <- length(fps[which(fps %nin% truth_set_must$TAG)])
+        fps <- length(fps[which(fps %in% truth_set_must$TAG)])
       }
       
     } else{
       if(permission == 'restrictive'){
         test_set_tags <- test_set$var_tag
-        ground_set_tags <- ground_set$var_tag
+        truth_set_tags <- truth_set$var_tag
       } else {
-        test_set_tags <- unique(test_set$TAG)
-        ground_set_tags <- unique(ground_set$TAG)
+        test_set_tags <- test_set$TAG
+        truth_set_tags <- truth_set$TAG
       }
       
       
-      tps <- length(test_set_tags[test_set_tags %in% ground_set_tags])
-      fps <- length(test_set_tags[test_set_tags %nin% ground_set_tags])
-      fns <- length(ground_set_tags[ground_set_tags %nin% test_set_tags])
+      tps <- length(test_set_tags[test_set_tags %in% truth_set_tags])
+      fps <- length(test_set_tags[test_set_tags %nin% truth_set_tags])
+      fns <- length(truth_set_tags[truth_set_tags %nin% test_set_tags])
       test_set_no_ev_not_detect <- 0 
-      ground_set_no_ev_not_detect <- 0 
+      truth_set_no_ev_not_detect <- 0 
     }
-    total_var_count <- tps + fps + fns + ground_set_no_ev_not_detect + test_set_no_ev_not_detect
-    
+    total_var_count <- tps + fps + fns + truth_set_no_ev_not_detect + test_set_no_ev_not_detect
     precision <- tps / (tps + fps)
     recall <- tps / (tps + fns)
     f1 <- (2 * precision * recall)/(precision + recall)
