@@ -340,10 +340,10 @@ if(opt$fillout_to_pr){
       ground <- ground %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$evidence], TRUE, FALSE))
     
       
-    } else{
-      test <- test %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% ground$var_tag , TRUE, FALSE))
-      ground <- ground %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% test$var_tag , TRUE, FALSE))
-    }  
+} else{
+  test <- test %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% ground$var_tag , TRUE, FALSE))
+  ground <- ground %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% test$var_tag , TRUE, FALSE))
+}  
     
 # Formatting
 i <- sapply(test, is.factor)
@@ -420,11 +420,11 @@ if(opt$fillouts){
     write.table(sample_fillout,file=sample_maf, row.names=FALSE,quote=FALSE, sep= '\t')
 
     test_fillout_command <- paste0('bsub -J ',job_name,'_',opt$name_test,' -e ',fillout_output_dir,'logs/',job_name,'_',opt$name_test,'.err -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
-                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', test_dir_norm,':', test_dir_norm,' -B ', test_dir_tumor,':',test_dir_tumor, ' get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --maq 20  --baq 20 --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',test_tumor_bam,' ',normal,':',test_normal_bam,' --output ',fillout_results_dir,opt$name_test,'/',opt$name_test,'_',sample,'_fillout.maf"' )
-    ## (defualt is 0?)
+                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', test_dir_norm,':', test_dir_norm,' -B ', test_dir_tumor,':',test_dir_tumor, ' get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',test_tumor_bam,' ',normal,':',test_normal_bam,' --output ',fillout_results_dir,opt$name_test,'/',opt$name_test,'_',sample,'_fillout.maf"' )
+    ## (defualt is 0?)#--maq 20  --baq 20 
   
     ground_fillout_command <- paste0('bsub -J ',job_name,'_',opt$name_ground, ' -e ',fillout_output_dir,'logs/',job_name,'_',opt$name_ground,'.err  -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
-                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', ground_dir_norm,':', ground_dir_norm,' -B ', ground_dir_tumor,':',ground_dir_tumor, ' get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --maq 20  --baq 20 --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',ground_tumor_bam,' ',normal,':',ground_normal_bam,' --output ',fillout_results_dir,opt$name_ground,'/',opt$name_ground,'_',sample,'_fillout.maf"' )
+                                   fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', ground_dir_norm,':', ground_dir_norm,' -B ', ground_dir_tumor,':',ground_dir_tumor, ' get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',ground_tumor_bam,' ',normal,':',ground_normal_bam,' --output ',fillout_results_dir,opt$name_ground,'/',opt$name_ground,'_',sample,'_fillout.maf"' )
     system(test_fillout_command)
      
       system(ground_fillout_command)
