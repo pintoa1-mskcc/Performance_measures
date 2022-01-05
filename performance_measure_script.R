@@ -332,8 +332,19 @@ if(opt$fillout_to_pr){
   
   ground <- ground %>% mutate(evidence = ifelse(t_alt_count >= 1, TRUE, FALSE))
   ground <- ground %>% mutate(detectable = ifelse(t_total_count >= 20, TRUE, FALSE))
-
-}
+      
+      test <- test %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$detectable] , TRUE, FALSE))
+      ground <- ground %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$detectable], TRUE, FALSE))
+      
+      test <- test %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$evidence], TRUE, FALSE))
+      ground <- ground %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$evidence], TRUE, FALSE))
+    
+      
+    } else{
+      test <- test %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% ground$var_tag , TRUE, FALSE))
+      ground <- ground %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% test$var_tag , TRUE, FALSE))
+    }  
+    
 # Formatting
 i <- sapply(test, is.factor)
 test[i] <- lapply(test[i], as.character)
@@ -866,27 +877,17 @@ if (opt$fillouts){
     ground <- rbind(ground,ground_off)
     test <- rbind(test,test_off)
   }
-  if(opt$fillout_to_pr){
-    
-    test <- test %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$detectable] , TRUE, FALSE))
-    ground <- ground %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$detectable], TRUE, FALSE))
-
-    test <- test %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$evidence], TRUE, FALSE))
-    ground <- ground %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$evidence], TRUE, FALSE))
-    
-    out_prefix <- str_replace(out_prefix,'fillout_','')
-    
-    
-  } else{
-    test <- test %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% ground$var_tag , TRUE, FALSE))
-    ground <- ground %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% test$var_tag , TRUE, FALSE))
-  }
+  
   ground <- as.data.frame(unnest(ground, substitutions))
   test <- as.data.frame(unnest(test, substitutions))
   write.table(ground,paste0(directory,out_prefix,'_',opt$name_ground,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   write.table(test,paste0(directory,out_prefix,'_',opt$name_test,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   
-  
+  if(opt$fillout_to_pr){
+    
+    out_prefix <- str_replace(out_prefix,'fillout_','')
+    
+  }
  
   
 }
