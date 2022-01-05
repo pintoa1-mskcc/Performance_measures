@@ -115,7 +115,7 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
         fns <- length(unique(ground_set_true_pos$TAG[ ground_set_true_pos$TAG  %in% test_set_true_neg$TAG]))
-        test_set_no_ev_not_detect <- length(unque(test_set[!test_set$evidence & !test_set$detectable,'TAG']))
+        test_set_no_ev_not_detect <- length(unique(test_set[!test_set$evidence & !test_set$detectable,'TAG']))
         
         ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
         fps <- length(unique(test_set_true_pos$TAG[test_set_true_pos$TAG  %in% ground_set_true_neg$TAG]))
