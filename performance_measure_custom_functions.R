@@ -86,7 +86,7 @@ calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
 ## Function will calculate recall, precision and f1 with error bars for dataframe
 ## Df must which contain var_tag variable
 
-f1_stats <- function(ground_set,test_set,type_of_analysis){
+f1_stats <- function(truth_set,test_set,type_of_analysis){
   n_samples <- length(unique(c(truth_set$Tumor_Sample_Barcode,test_set$Tumor_Sample_Barcode)))
   stats <- do.call(rbind,lapply(c('restrictive','permissive'), function(permission){
     
