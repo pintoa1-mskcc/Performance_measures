@@ -96,7 +96,7 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
       ground_set_must <- ground_set[!ground_set$evidence & ground_set$detectable,]
       
       if(permission == 'restrictive'){
-        tps <- length(ground_set$var_tag[ground_set$var_tag[ground_set$evidence] %in% test_set$var_tag[test_set$evidence]])
+        tps <- length(ground_set$var_tag[ground_set$evidence & ground_set$var_tag %in% test_set$var_tag[test_set$evidence]])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
         fns <- ground_set$var_tag[ground_set$evidence & ground_set$var_tag %nin% test_set$var_tag[test_set$evidence]]
