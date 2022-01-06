@@ -42,6 +42,7 @@ To run fillouts, you must do the following:
 	--ground_fillout_mapping. provide a txt file with the Tumor/normal IDs and bam locations for the ground file. MUST CORRESPOND TO THE -g ground.maf!
 
 The first step in this fillouts command is to generate a target MAF file for fillouts to genotype. To do this, I combine the unique variants to get alist of all variants found in both test and ground. We check to ensure that all the provided BAMs in your mapping file exist in our MAFs. If a tumor/normal from your mapping file does NOT exist in the provided MAFs, a warning will be printed and that sample will not have fillouts run since no targets are provided.  HOWEVER, if a sample exists in our provided MAFs but does not exist in the mapping files provided, the tool will throw an error and stop. 
+Fillouts will be run using CMO's GetBaseCountsMultiSample docker container. The ground AND test files will both be genotyped with the unique variants. 
 
 While fillouts is running, the basic analysis will continue. Within your providedd output directory, a fillouts directory will be created. Once fillouts is complete for all samples, we proceed to the next step to restructure and gather the fillouts results ( see fillouts_restruct.R) 
 
@@ -49,7 +50,7 @@ Fillouts_restruct restructures the fillouts results so tumor normal results per 
 
 The final result of fillouts_restruct.R is two MAFs that have been genotypes corresponding to your test and ground MAFs. These two mafs will then go back to the original script to have PR metrics run. 
 
-When returning to the original script, fillouts  results will be slightly different. We will first calculate EVIDENCE (or evidence that an alt allele exists, i.el t_alt_count >= 1), then we determing detectablity (t_total_count >= 20). 
+When returning to the original script, fillouts  results will be slightly different. We will first calculate EVIDENCE (or evidence that an alt allele exists, i.e: t_alt_count >= 1), then we determine detectablity (t_total_count >= 20). 
 We utilize detectablity and evidence to identify our tps, fps and fns for our performance measures. TP is defined as a variant that has evidence in both ground and test. FP is defined as a variant with evidence in TEST but no evidence in GROUND while also being detectable in GROUND. FN is defined as a variant with evidence in GROUND but is detectable in TEST but has NO EVIDENCE. Variants that have no evidence and are not detectable are removed from analysis. 
 
 Statistics and graphs are otherwise treated the same way as the original method. Final MAFs returned will have additional columns Detectable_in_Other_Run and Evidence_in_Other_Run. 
