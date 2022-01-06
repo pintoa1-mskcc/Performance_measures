@@ -12,6 +12,9 @@ NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report g
 ## Arguments for performance_measure_script.R
 ### Required
 #### Basic Analysis
+
+Choice of ground and test files determines your recall and precision metrics. Your ground file is assumped to be absolute truth; for the sake of accurate comparison of recall and precision, some variables in the test file will be set the the ground file's values. To see the variables that are compared, check the resulting annotated file.
+
 ```
 -g/ --ground			Path to cohort ground .MAF file
 -t/ --test			Path to cohort test .MAF file
@@ -30,7 +33,8 @@ NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report g
 -s/ --name_test			Name of test cohort
 -o/ --out_prefix		Out prefix. Default is Sys.time: %Y_%M_%D_%h:%m:%s_
 -b/ --bed_file			Path to target .BED file. Activated on target analysis. See [description](./docs/description) for more information.
--m/ --multiqc			Generate a HTML report of results
+-m/ --multiqc			  Generate a HTML report of results
+-v/ --additional_variables  A single or comma-seperated list of additional variables to calculate metrics on. These variables MUST be already in your .MAF files. These variables also must be catagorical.
 ```
 
 ## Examples
