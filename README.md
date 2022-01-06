@@ -1,5 +1,5 @@
-# Performance Measure Calculations
-This tool is meant to calculate performacne metrics on different slices of the input data. The tool expected 2 MAF files as the input to compare recall and precision between the two. The results are then subsectioned based on annotations for a clearer picture. If the FILLOUTS flag is specified, the tool will run metrics on both the CALLED (or original MAF file) and the resulting genotyped MAF files. 
+# Performance Measure Metrics
+This tool is meant to calculate performance metrics on different slices of the input data. The tool expected 2 MAF files as the input to compare recall and precision between the two. The results are then subsectioned based on annotations for a clearer picture. If the FILLOUTS flag is specified, the tool will run metrics on both the CALLED (or original MAF file) and the resulting genotyped MAF files. 
 
 NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report generation/multiqc.
 
