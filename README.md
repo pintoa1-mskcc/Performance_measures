@@ -1,7 +1,7 @@
 # Performance Measure Calculations
 This tool is meant to calculate performacne metrics on different slices of the input data. The tool expected 2 MAF files as the input to compare recall and precision between the two. The results are then subsectioned based on annotations for a clearer picture. If the FILLOUTS flag is specified, the tool will run metrics on both the CALLED (or original MAF file) and the resulting genotyped MAF files. 
 
-NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report generation/multiqc. 
+NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report generation/multiqc.
 
 # Pipeline Flowchart
 <p align="center">
@@ -19,8 +19,8 @@ NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report g
 ### Genotyping
 ```
 -f/ --fillouts 			[Providing flag activates genotyping]
--r/ --ground_fillout_mapping	Path to ground tumor/normal BAM mapping .TXT file
--e/ --test_fillout_mapping	Path to test tumor/normal BAM mapping .TXT file 
+-r/ --ground_fillout_mapping	Path to ground tumor/normal BAM mapping .TXT file. See helper script below.
+-e/ --test_fillout_mapping	Path to test tumor/normal BAM mapping .TXT file. See helper script below.
 ```
 
 ## Optional
@@ -52,7 +52,10 @@ NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report g
 
 
 ## Helper Script
-[making_fillouts_mapping_file.R](./making_fillouts_mapping_file.R)
+[making_fillouts_mapping_file.R](./making_fillouts_mapping_file.R) 
+This script can help generate a TXT mapping file. Provide the directory containing the test OR ground BAMs, a TXT file with the Tumor - Normal Pair (expected header TUMOR_ID \t NORMAL_ID), and the name of the output file. 
+
+Sym links are not functional when genotyping. 
 
 # Required R packages
 - dplyr
