@@ -1,7 +1,15 @@
 Tool to calculate performance metrics on different slices of data. Has additional functionality to genotype the selected samples.
 
+
+
+
+
 ARGUMENT PARSING:
 Must submit a 'ground' and 'test' MAF. Optional flags include providing an output directory (defaults to current working directory), a output prefix (defaults to current date and time to prevent overwritting previous runs), and a bed file for processing on and off target results. 
+
+
+
+
 
 Basic Run:
 If you do not wish to run fillouts the following will occur:
@@ -28,12 +36,12 @@ Some other more complicated variables include defining purity and t_variant_freq
 Similarly for purity, we assign sample purity according to the ground sample purity, so we can assess at each purity bin how well the test set can recapture those variants. 
 
 PLOTTING AND CALCULATING STATS
-Basic mode will automatically create plots based on these variables: 'oncogenic_tf','clonality','substitutions','is_non_syn_mut','t_var_freq_bin', and purity_bin if there are more than 20 samples within the provided MAFS.  Additionally it will provide an "overview" in which it summaries the PR_metrics over SNPs/indels/all variants. When plotting overview you will see SNPS/indels and all. All represents the union results of SNPs and indels together. For each variable listed above, the tool will also break down the statistics for SNPs/indels/all. When plotting results for each variable, the tool only visualizes the results for all, results for SNPs and indels will be saved in the .txt file.  PDFs generated for these cohort level statistics will be a bar plot
+Basic mode will automatically create plots based on these variables: 'oncogenic_tf','clonality','substitutions','is_non_syn_mut','t_var_freq_bin', and purity_bin.  Additionally it will provide an "overview" in which it summaries the PR_metrics over SNPs/indels/all variants. When plotting overview you will see SNPS/indels and all. All represents the union results of SNPs and indels together. For each variable listed above, the tool will also break down the statistics for SNPs/indels/all. When plotting results for each variable, the tool only visualizes the results for all, results for SNPs and indels will be saved in the .txt file.  PDFs generated for these cohort level statistics will be a bar plot
 
 Once calculations are complete on the cohort level, we go back and calculate the performance measures for each individual sample provided. PDFs for these sample level statistics will be a boxplot. 
 
 Finishing
-The last step of this script will save the labelled MAF for ground and test to your output directory. This will state all the variables that were geneated and tell you whether or not the variant was called in the other provided maf. These mafs will be saved with the suffixes "ground_PR_labeled.maf" and "test_PR_labeled.maf"
+The last step of this script will save the annotated MAF for ground and test to your output directory. This will state all the variables that were geneated and tell you whether or not the variant was called in the other provided maf. These mafs will be saved with the suffixes "ground_PR_labeled.maf" and "test_PR_labeled.maf"
 
 
 ADDING A BED FILE
@@ -44,16 +52,15 @@ There will be a pdf/txt file generated with on_target/off_target performance mea
 
 FILLOUTS
 To run fillouts, you must do the following:
-	-f flag to TRUE
+	-f flag set
 	--test_fillout_mapping, provide a txt file with the Tumor/normal IDs and bam locations for the test file. MUST CORRESPOND TO THE -t test.maf!
 	--ground_fillout_mapping. provide a txt file with the Tumor/normal IDs and bam locations for the ground file. MUST CORRESPOND TO THE -g ground.maf!
-	--python_maf_fillout, python script for maf_fillout.py. As of Nov 11, 2021, this is being tested for functionality with singularity image. If successful this flag can be removed along with the --juno flag. 
 
 The first step in this fillouts command is to generate a target MAF file for fillouts to genotype. To do this, I combine the unique variants to get alist of all variants found in both test and ground. We check to ensure that all the provided BAMs in your mapping file exist in our MAFs. If a tumor/normal from your mapping file does NOT exist in the provided MAFs, a warning will be printed and that sample will not have fillouts run since no targets are provided.  HOWEVER, if a sample exists in our provided MAFs but does not exist in the mapping files provided, the tool will throw an error and stop. 
 
 While fillouts is running, the basic analysis will continue. Within your providedd output directory, a fillouts directory will be created. Once fillouts is complete for all samples, we proceed to the next step to restructure and gather the fillouts results ( see fillouts_restruct.R) 
 
-Fillouts_restruct restructures the fillouts results so tumor normal results per variant are on the same line. If you are going to be going back to the main script, this will also merge in your annotations from the original mafs. 
+Fillouts_restruct restructures the fillouts results so tumor normal results per variant are on the same line. This will also merge in your annotations from the original mafs. 
 
 The final result of fillouts_restruct.R is two MAFs that have been genotypes corresponding to your test and ground MAFs. These two mafs will then go back to the original script to have PR metrics run. 
 
