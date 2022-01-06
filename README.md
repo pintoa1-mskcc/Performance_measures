@@ -3,27 +3,27 @@ This tool is meant to calculate performacne metrics on different slices of the i
 
 NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report generation/multiqc.
 
-# Pipeline Flowchart
+## Pipeline Flowchart
 <p align="center">
   <img src="./docs/performance_measure_workflow.png"/>
 </p>
 
 
-# Arguments for performance_measure_script.R
-## Required
-### Basic Analysis
+## Arguments for performance_measure_script.R
+### Required
+#### Basic Analysis
 ```
 -g/ --ground			Path to cohort ground .MAF file
 -t/ --test			Path to cohort test .MAF file
 ```
-### Genotyping
+#### Genotyping
 ```
 -f/ --fillouts 			[Providing flag activates genotyping]
 -r/ --ground_fillout_mapping	Path to ground tumor/normal BAM mapping .TXT file. See helper script below.
 -e/ --test_fillout_mapping	Path to test tumor/normal BAM mapping .TXT file. See helper script below.
 ```
 
-## Optional
+### Optional
 ```
 -d/ --directory			Save results to this directory. Default is working directory
 -n/ --name_ground		Name of ground cohort
@@ -33,31 +33,31 @@ NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report g
 -m/ --multiqc			Generate a HTML report of results
 ```
 
-# Examples
+## Examples
 
-## Basic Run:
+### Basic Run:
 
 `Rscript performance_measure_script.R --test test.maf --ground  ground.maf -n DRAGEN -s TEMPO -d base_run_dir_0`
 
-### Generate HTML report
+#### Generate HTML report
 `Rscript performance_measure_script.R --test test.maf --ground  ground.maf -n DRAGEN -s TEMPO -d base_mqc_run_dir_0 -m`
 
-## Genotyping Run:
+### Genotyping Run:
 
 `Rscript performance_measure_script.R -t test.maf -g ground.maf -n DRAGEN -s TEMPO -f --ground_fillout_mapping ground_bam_mapping_for_fillouts.txt --test_fillout_mapping test_bam_mapping_for_fillouts.txt -d fillouts_run_dir_0  `
 
-## On Target + Genotyping Run:
+### On Target + Genotyping Run:
 
 `Rscript performance_measure_script.R -t test.maf -g ground.maf -n DRAGEN -s TEMPO -f -r ground_bam_mapping_for_fillouts.txt -e test_bam_mapping_for_fillouts.txt -b IMPACT468_b37.bed -d fillouts_mqc_bed_run_dir_0`
 
 
-## Helper Script
+### Helper Script
 [making_fillouts_mapping_file.R](./making_fillouts_mapping_file.R) 
 This script can help generate a TXT mapping file. Provide the directory containing the test OR ground BAMs, a TXT file with the Tumor - Normal Pair (expected header TUMOR_ID \t NORMAL_ID), and the name of the output file. 
 
 Sym links are not functional when genotyping. 
 
-# Required R packages
+## Required R packages
 - dplyr
 - data.table
 - stringr
