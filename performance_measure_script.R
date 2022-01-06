@@ -489,7 +489,7 @@ if(!is.null(opt$bed_file)){
   })
   
   sample_level_df <- do.call(rbind,sample_level_df)
-  cols.nums <- c(seq(2,9,1),seq(10,13,1))
+  cols.nums <- c(seq(2,9,1),seq(11,13,1))
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
   sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
   
