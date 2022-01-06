@@ -33,8 +33,8 @@ Choice of ground and test files determines your recall and precision metrics. Yo
 -s/ --name_test			Name of test cohort
 -o/ --out_prefix		Out prefix. Default is Sys.time: %Y_%M_%D_%h:%m:%s_
 -b/ --bed_file			Path to target .BED file. Activated on target analysis. See [description](./docs/description) for more information.
--m/ --multiqc			  Generate a HTML report of results
--v/ --additional_variables  A single or comma-seperated list of additional variables to calculate metrics on. These variables MUST be already in your .MAF files. These variables also must be catagorical.
+-m/ --multiqc			 Generate a HTML report of results
+-v/ --additional_variables    A single or comma-seperated list of additional variables to calculate metrics on. These variables MUST be already in your .MAF files and be catagorical.
 ```
 
 ## Examples
