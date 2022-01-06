@@ -1,23 +1,19 @@
+# Performance Measure Calculations
+This tool is meant to calculate performacne metrics on different slices of the input data. The tool expected 2 MAF files as the input to compare recall and precision between the two. The results are then subsectioned based on annotations for a clearer picture. If the FILLOUTS flag is specified, the tool will run metrics on both the CALLED (or original MAF file) and the resulting genotyped MAF files. 
+
+# Pipeline Flowchart
+<p align="center">
+  <img id="diagram" src="./docs/performance_measure_workflow.png"/>
+</p>
 
 
+# Arguments
+## Required
+` -g / --ground: GROUND FILE`
 
+## Optional
 
-
-
-
-
-Tool to calculate performance metrics on different slices of data. Has additional functionality to genotype the selected samples.
-
-
-
-
-
-ARGUMENT PARSING:
-Must submit a 'ground' and 'test' MAF. Optional flags include providing an output directory (defaults to current working directory), a output prefix (defaults to current date and time to prevent overwritting previous runs), and a bed file for processing on and off target results. 
-
-
-
-
+# Required R packages
 
 Basic Run:
 If you do not wish to run fillouts the following will occur:
