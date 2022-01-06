@@ -3,7 +3,7 @@ This tool is meant to calculate performacne metrics on different slices of the i
 
 # Pipeline Flowchart
 <p align="center">
-  <img id="diagram" src="./docs/performance_measure_workflow.png"/>
+  <img src="./docs/performance_measure_workflow.png"/>
 </p>
 
 
