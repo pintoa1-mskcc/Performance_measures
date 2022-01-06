@@ -92,6 +92,9 @@ custom_data:
     pconfig:
       id: 'type_sample'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
