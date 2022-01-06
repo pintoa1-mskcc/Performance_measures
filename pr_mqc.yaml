@@ -26,6 +26,9 @@ custom_data:
     pconfig:
       id: 'type_cohort'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -161,6 +164,9 @@ custom_data:
     pconfig:
       id: 'on_target_cohort'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -224,6 +230,9 @@ custom_data:
     pconfig:
       id: 'on_target_sample'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -289,6 +298,9 @@ custom_data:
     pconfig:
       id: 'oncogenic_tf_cohort'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -352,6 +364,9 @@ custom_data:
     pconfig:
       id: 'clonality_sample'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -417,6 +432,9 @@ custom_data:
     pconfig:
       id: 'substitutions_sample'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -482,6 +500,9 @@ custom_data:
     pconfig:
       id: 'oncogenic_tf_sample'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -547,6 +568,9 @@ custom_data:
     pconfig:
       id: 'clonality_cohort'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -608,6 +632,9 @@ custom_data:
     pconfig:
       id: 'is_non_syn_mut_cohort'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -669,6 +696,9 @@ custom_data:
     pconfig:
       id: 'is_non_syn_mut_sample'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -735,6 +765,9 @@ custom_data:
     pconfig:
       id: 'substitutions_cohort'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -826,6 +859,9 @@ custom_data:
     pconfig:
       id: 'purity_cohort'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350
@@ -887,6 +923,9 @@ custom_data:
     pconfig:
       id: 'vaf_cohort'
     headers:
+      'vars_with_no_evidence_in_either_test_or_ground':
+        title: 'Variants No evidence in Test+Ground'
+        placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
         placement: 1350

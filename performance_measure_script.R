@@ -450,7 +450,7 @@ binned_variables <- variables_to_parse[grepl('bin',variables_to_parse)]
 
 if(!is.null(opt$bed_file)){
   df <- parse_dataframe_on_var(ground,test,'on_target','cohort')
-  df <- df[,c('permission','type','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+  df <- df[,c('permission','type','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
   
   write.table(df,paste0(directory,'results/',out_prefix,'_','on_target','_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   df1 <- df %>% filter(permission == 'restrictive')
@@ -489,9 +489,9 @@ if(!is.null(opt$bed_file)){
   })
   
   sample_level_df <- do.call(rbind,sample_level_df)
-  cols.nums <- c(seq(2,8,1),seq(10,12,1))
+  cols.nums <- c(seq(2,9,1),seq(10,13,1))
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
-  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
   
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
@@ -526,7 +526,7 @@ if(!is.null(opt$bed_file)){
 }
 
 overview_df <- calc_stats_by_variant_type(ground,test,'cohort')
-overview_df <- overview_df[,c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+overview_df <- overview_df[,c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 write.table(overview_df,paste0(directory,'results/',out_prefix,'_overview_all_variants_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
 overview_df <- overview_df[overview_df$permission == 'restrictive',]
 
@@ -553,7 +553,7 @@ if(!opt$fillouts){
 
 variable_parsing_and_graph <- function(variable) {
   df <- parse_dataframe_on_var(ground,test,variable,'cohort')
-  df <- df[,c('permission','type',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+  df <- df[,c('permission','type',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
   
   write.table(df,paste0(directory,'results/',out_prefix,'_',variable,'_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   
@@ -633,7 +633,7 @@ if(opt$fillout_to_pr){
   binned_vars_v$Frequency <- binned_vars_v$t_var_freq_bin
   binned_vars_p$Frequency <- binned_vars_p$purity_bin
   binned_vars_v$Variable_ID <- 'called_vaf'
-  shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','Variable_ID','Frequency')
+  shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','Frequency')
   c_binned_vars <- rbind(binned_vars_p[,shared_cols],binned_vars_v[,shared_cols])
   
 
@@ -647,7 +647,7 @@ if(opt$fillout_to_pr){
  purity_nas$Variable_ID <- 'genotyped_purity'
  purity_nas$Genotyped <- "Genotyped"
  binned_vars_p$Genotyped <- 'Called'
- shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','Variable_ID','purity_bin')
+ shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','purity_bin')
  
  c_purity_nas <- binned_vars_p[grepl('N/A',binned_vars_p$purity_bin),] %>% filter(type == 'all') %>% filter(permission == 'restrictive')
  purity_nas <- rbind(c_purity_nas[,c('Genotyped',shared_cols)],purity_nas[,c('Genotyped',shared_cols)])
@@ -691,7 +691,7 @@ if(opt$multiqc){
   colnames(purity_nas)[colnames(purity_nas) == 'purity_bin']  <- 'Purity'
   colnames(binned_vars_pur)[colnames(binned_vars_pur) == 'Frequency'] <- 'Purity'
 
-  shared_cols <- c('Variable_ID','Purity','permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')
+  shared_cols <- c('Variable_ID','Purity','permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')
   if(opt$fillout_to_pr){
     shared_cols <- c(shared_cols, 'Genotyped')
   }
@@ -724,9 +724,9 @@ sample_level_raw <- lapply(all_samples, function(sample){
 })
 
 sample_level_raw <- do.call(rbind,sample_level_raw)
-cols.nums <- c(seq(2,8,1),seq(10,12,1))
+cols.nums <- c(seq(2,9,1),seq(10,13,1))
 sample_level_raw[cols.nums] <- lapply(sample_level_raw[cols.nums], as.numeric)
-sample_level_raw <- sample_level_raw[,c('permission','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+sample_level_raw <- sample_level_raw[,c('permission','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
 write.table(sample_level_raw,paste0(directory,'results/',out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
 sample_level_raw <- sample_level_raw[sample_level_raw$permission == 'restrictive',]
@@ -762,9 +762,9 @@ variable_parsing_and_graph_sample <- function(variable) {
   write(variable,stderr())
   
   sample_level_df <- do.call(rbind,sample_level_df)
-  cols.nums <- c(seq(2,8,1),seq(10,12,1))
+  cols.nums <- c(seq(2,9,1),seq(10,13,1))
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
-  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')]
+  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   

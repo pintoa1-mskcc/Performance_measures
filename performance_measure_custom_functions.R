@@ -76,7 +76,7 @@ calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
     
   })
   output1 <- as.data.frame(do.call(rbind,output1))
-  cols.num <- c(seq(2,8,1),seq(10,12,1))
+  cols.num <- c(seq(2,9,1),seq(11,13,1))
   output1[cols.num] <- lapply(output1[cols.num], as.numeric)
   return(output1)
 }
@@ -104,23 +104,25 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
         fns <- length(fns[which(fns %in% test_set_must$var_tag)])
         
         ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- test_set$var_tag[test_set$evidence & test_set$var_tag %nin% ground_set$var_tag[ground_set$evidence]]
+        fps <- test_set$var_tag[test_set$evidence & test_set$var_tag %in% ground_set$var_tag[!ground_set$evidence]]
         ground_set_no_ev_not_detect <- length(fps[which(fps %nin% ground_set_must$var_tag)])
         
         fps <- length(fps[which(fps %in% ground_set_must$var_tag)])
-        
+        vars_with_no_evidence_in_either_test_or_ground <- length(ground_set$var_tag[!ground_set$evidence & ground_set$var_tag %in%  test_set$var_tag[!test_set$evidence]])
       } else {
-        tps <- length(ground_set$TAG[ground_set$TAG[ground_set$evidence] %in% test_set$TAG[test_set$evidence]])
+        tps <- length(unique(ground_set$TAG[ground_set$evidence & ground_set$TAG %in% test_set$TAG[test_set$evidence]]))
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- ground_set$TAG[ground_set$TAG[ground_set$evidence]  %nin% test_set$TAG[test_set$evidence]]
-        test_set_no_ev_not_detect <- length(fns[which(fns %nin% test_set_must$TAG)])
-        fns <- length(fns[which(fns %in% test_set_must$TAG)])
+        fns <- ground_set$TAG[ground_set$evidence & ground_set$TAG  %nin% test_set$TAG[test_set$evidence]]
+        test_set_no_ev_not_detect <- length(unique(fns[which(fns %nin% test_set_must$TAG)]))
+        fns <- length(unique(fns[which(fns %in% test_set_must$TAG)]))
         
         ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- test_set$TAG[test_set$TAG[test_set$evidence]  %nin% ground_set$TAG[ground_set$evidence]]
-        ground_set_no_ev_not_detect <- length(fps[which(fps %nin% ground_set_must$TAG)])
-        fps <- length(fps[which(fps %in% ground_set_must$TAG)])
+        fps <- test_set$TAG[test_set$evidence & test_set$TAG  %nin% ground_set$TAG[ground_set$evidence]]
+        ground_set_no_ev_not_detect <- length(unique(fps[which(fps %nin% ground_set_must$TAG)]))
+        fps <- length(unique(fps[which(fps %in% ground_set_must$TAG)]))
+        vars_with_no_evidence_in_either_test_or_ground <- length(unique(ground_set$TAG[!ground_set$evidence & ground_set$TAG %in%  test_set$TAG[!test_set$evidence]]))
+        
       }
       
     } else{
@@ -138,8 +140,9 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
       fns <- length(ground_set_tags[ground_set_tags %nin% test_set_tags])
       test_set_no_ev_not_detect <- 0 
       ground_set_no_ev_not_detect <- 0 
+      vars_with_no_evidence_in_either_test_or_ground <- 0
     }
-    total_var_count <- tps + fps + fns + ground_set_no_ev_not_detect + test_set_no_ev_not_detect
+    total_var_count <- tps + fps + fns + ground_set_no_ev_not_detect + test_set_no_ev_not_detect + vars_with_no_evidence_in_either_test_or_ground
     
     precision <- tps / (tps + fps)
     recall <- tps / (tps + fns)
@@ -164,14 +167,14 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
     } else {
       f1_confidence <- rep(NA,2)
     }
-    repo <- c(permission,total_var_count,n_samples,tps,fps,fns,ground_set_no_ev_not_detect,test_set_no_ev_not_detect)
+    repo <- c(permission,total_var_count,n_samples,tps,fps,fns,ground_set_no_ev_not_detect,test_set_no_ev_not_detect,vars_with_no_evidence_in_either_test_or_ground)
     stats_p <- c(repo,'precision',precision,bin_conf_precision$lower,bin_conf_precision$upper)
     stats_r <- c(repo,'recall', recall,bin_conf_recall$lower,bin_conf_recall$upper)
     stats_f <- c(repo,'f1_Score',f1,f1_confidence[1],f1_confidence[2])
     
     stats <- as.data.frame(rbind(stats_r,stats_p,stats_f))
-    colnames(stats) <- c('permission','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','statistic_name','value','lower','upper')
-    col.nums <- c(seq(2,8,1),seq(10,12,1))
+    colnames(stats) <- c('permission','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','statistic_name','value','lower','upper')
+    col.nums <- c(seq(2,9,1),seq(11,13,1))
     
     stats[col.nums] <- lapply(stats[col.nums], as.numeric)
     
@@ -288,12 +291,12 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     df[,variable] <- paste0(df[,variable],'/',df$Genotyped)
   }
   
-  statistics_to_parse <- c('recall','precision','f1_Score','total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')
+  statistics_to_parse <- c('recall','precision','f1_Score','total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')
   names(statistics_to_parse) <- statistics_to_parse
   
   if(level != 'sample'){
     tmp <- pivot_wider(df[,c(variable,'statistic_name','value')], names_from = 'statistic_name', values_from = "value")
-    tmp2 <- unique(df[,c(variable,'total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')])
+    tmp2 <- unique(df[,c(variable,'total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')])
     tmp3 <- merge(tmp,tmp2)
 
     tmp3$ID <- tmp3[,variable]
@@ -309,7 +312,7 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     df$ID <- paste(df$Tumor_Sample_Barcode,df[,variable], sep = '/')
     
     tmp <- pivot_wider(df[,c('ID','statistic_name','value')], names_from = 'statistic_name', values_from = "value")
-    tmp2 <- unique(df[,c('ID','total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect')])
+    tmp2 <- unique(df[,c('ID','total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')])
     tmp <- merge(tmp,tmp2)
     tmp3 <- tmp
    #  variables <- unique(tmp[,variable])
