@@ -246,6 +246,10 @@ warning(paste0("For the purposes of this analysis, the shared variants clonality
 
 shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
 test[match(shared_variants,test$var_tag),'clonality'] <- ground[match(shared_variants, ground$var_tag),'clonality']
+
+ground$clonality <- as.character(ground$clonality)
+
+test$clonality <- as.character(test$clonality)
 test[is.na(test$clonality),'clonality'] <- 'N/A'
 ground[is.na(ground$clonality),'clonality'] <- 'N/A'
 }
@@ -347,6 +351,10 @@ if(res["purity_bin"]){
     combined <- merge(tumor_sample_purity_mapping,testing_purity_maping,by="Tumor_Sample_Barcode",suffixes = c(opt$name_ground,opt$name_test))
     write.table(combined[which(combined[,paste0('purity_bin',opt$name_ground)] != combined[,paste0('purity_bin',opt$name_ground)] ),],file=paste0(directory,'logs/003.txt'),quote = FALSE) 
     test <- left_join(test[,colnames(test) %nin% c("purity_bin",'purity')],tumor_sample_purity_mapping,by = "Tumor_Sample_Barcode")
+    
+    test$purity_bin <- as.character(test$purity_bin)
+    ground$purity_bin <- as.character(ground$purity_bin)
+    
     test[is.na(test$purity_bin),'purity_bin'] <- 'N/A'
     ground[is.na(ground$purity_bin),'purity_bin'] <- 'N/A'
     }
@@ -370,6 +378,7 @@ if(opt$fillout_to_pr){
   test <- test %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% ground$var_tag , TRUE, FALSE))
   ground <- ground %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% test$var_tag , TRUE, FALSE))
 }  
+
     
 # Formatting
 i <- sapply(test, is.factor)
