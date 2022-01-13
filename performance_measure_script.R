@@ -171,6 +171,19 @@ if(any(c(missing_in_test,missing_in_ground))) {
 all_samples <- unique(c(test$Tumor_Sample_Barcode, ground$Tumor_Sample_Barcode))
 names(all_samples) <- all_samples
 
+### CHECK FOR ALL REQUIRED FLAGS
+needed_flags <- c('cf','purity','oncogenic','Variant_Classification','t_var_freq')
+res <- sapply(needed_flags,function(variable){
+  if (variable %nin% colnames(test) | variable %nin% colnames(ground)){
+    warning(paste0(variable, " is missing from MAF(s) header.  This analysis will not be run"))
+    additional_variables <- additional_variables[additional_variables != variable]
+    return(FALSE)
+  } else{
+   return(TRUE)
+  }
+})
+names(res) <- c('clonality','purity_bin','oncogenic_tf','is_non_syn_mut','t_var_freq_bin')
+
 # If a BED is provided, filter all variants so only on target is analyzed 
 if(!is.null(opt$bed)){
   test <- test %>% mutate(bed_tag = paste(Chromosome,Start_Position,End_Position, sep = '_'))
@@ -209,46 +222,56 @@ if(!is.null(opt$bed)){
 
 ### Make tag ids, var_tag is restrictive, TAG is permissive mode
 ground<- ground %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_Position,':',Reference_Allele,':',Tumor_Seq_Allele2,':',Tumor_Sample_Barcode),
-                           TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode)) %>%
-  mutate(oncogenic_tf =ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER')) %>%
-  mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity), 
+                           TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode))
+test <- test  %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_Position,':',Reference_Allele,':',Tumor_Seq_Allele2,':',Tumor_Sample_Barcode), 
+                         TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode))
+
+if(res['oncogenic_tf']){
+ground <- ground %>%  mutate(oncogenic_tf =ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER'))
+test <- test  %>%  mutate(oncogenic_tf = ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER') ) 
+}
+if(res['clonality']){
+ground <- ground %>% mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity), 
                             'INDETERMINATE',
                                              ifelse((ccf_expected_copies > 0.8 | (ccf_expected_copies > 0.7 & ccf_expected_copies_upper > 0.9)), 
                                                                                                                         'CLONAL', 
-                                                                                                                        'SUBCLONAL')))%>%
-  mutate(is_non_syn_mut = ifelse(Variant_Classification %in% c("Missense_Mutation", 
-                                                               "Nonsense_Mutation", 
-                                                               "Nonstop_Mutation", 
-                                                               "Frame_Shift_Ins", 
-                                                               "Frame_Shift_Del",
-                                                               "In_Frame_Del",
-                                                               "In_Frame_Ins",
-                                                               "Translation_Start_Site",
-                                                               "Splice_Site"), T, F)) 
+                                                                                                                        'SUBCLONAL')))
+test <- test %>%  mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity), 
+                                        'INDETERMINATE',
+                                        ifelse((ccf_expected_copies > 0.8 | (ccf_expected_copies > 0.7 & ccf_expected_copies_upper > 0.9)), 
+                                               'CLONAL', 
+                                               'SUBCLONAL')))
 
-### We will calcaulate clonality for test var tags in case they are false positives, but true positives must match between ground and test var tags
-test <- test  %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_Position,':',Reference_Allele,':',Tumor_Seq_Allele2,':',Tumor_Sample_Barcode), 
-                         TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode)) %>% 
-  mutate(oncogenic_tf = ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER') ) %>%
-  mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity), 
-                             'INDETERMINATE',
-                                             ifelse((ccf_expected_copies > 0.8 | (ccf_expected_copies > 0.7 & ccf_expected_copies_upper > 0.9)), 
-                                                                                                                          'CLONAL', 
-                                                                                                                          'SUBCLONAL'))) %>%
-  mutate(is_non_syn_mut = ifelse(Variant_Classification %in% c("Missense_Mutation", 
-                                                               "Nonsense_Mutation", 
-                                                               "Nonstop_Mutation", 
-                                                               "Frame_Shift_Ins", 
-                                                               "Frame_Shift_Del",
-                                                               "In_Frame_Del",
-                                                               "In_Frame_Ins",
-                                                               "Translation_Start_Site",
-                                                               "Splice_Site"), T, F)) 
-# Clonality must match to the ground values for accurate calculation of recall
 warning(paste0("For the purposes of this analysis, the shared variants clonality is set to the ",opt$name_ground," files' clonality values for accurate comparison."))
 
 shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
 test[match(shared_variants,test$var_tag),'clonality'] <- ground[match(shared_variants, ground$var_tag),'clonality']
+test[is.na(test$clonality),'clonality'] <- 'N/A'
+ground[is.na(ground$clonality),'clonality'] <- 'N/A'
+}
+
+if(res["is_non_syn_mut"]){
+ground <- ground %>% mutate(is_non_syn_mut = ifelse(Variant_Classification %in% c("Missense_Mutation", 
+                                                               "Nonsense_Mutation", 
+                                                               "Nonstop_Mutation", 
+                                                               "Frame_Shift_Ins", 
+                                                               "Frame_Shift_Del",
+                                                               "In_Frame_Del",
+                                                               "In_Frame_Ins",
+                                                               "Translation_Start_Site",
+                                                               "Splice_Site"), T, F)) 
+test <- test %>% mutate(is_non_syn_mut = ifelse(Variant_Classification %in% c("Missense_Mutation", 
+                                                                             "Nonsense_Mutation", 
+                                                                             "Nonstop_Mutation", 
+                                                                             "Frame_Shift_Ins", 
+                                                                             "Frame_Shift_Del",
+                                                                             "In_Frame_Del",
+                                                                             "In_Frame_Ins",
+                                                                             "Translation_Start_Site",
+                                                                             "Splice_Site"), T, F)) 
+}
+### We will calcaulate clonality for test var tags in case they are false positives, but true positives must match between ground and test var tags
+
 
 #Same assumption will hold for any additional variables
 for(variable in additional_variables){
@@ -257,6 +280,7 @@ for(variable in additional_variables){
   test[match(shared_variants,test$var_tag),variable] <- ground[match(shared_variants, ground$var_tag),variable]
   
 }
+
 test <- test %>% mutate(ref_to_alt = paste(Reference_Allele,Tumor_Seq_Allele2,sep=">"))  %>%
   mutate(substitutions = ifelse( Variant_Type %nin% c('SNP','SNV'), NA,sapply( ref_to_alt,function(ref_to_alt ) {
     new_sub <- switch(ref_to_alt, "A>C" = "T>G", "T>G" = "T>G","A>G" ="T>C","T>C" = "T>C","A>T" = "T>A","T>A" ="T>A",
@@ -278,7 +302,7 @@ breaks <- seq(0,1,0.05)
 tags <- c("[0-5)","[5-10)", "[10-15)", "[15-20)", "[20-25)", "[25-30)","[30-35)", "[35-40)","[40-45)", "[45-50)","[50-55)","[55-60)","[60-65)","[65-70)","[70-75)","[75-80)","[80-85)","[85-90)","[90-95)","[95-100)")
 tags <- factor(tags,levels=tags)
 
-
+if(res['t_var_freq_bin']){
 ground$t_var_freq_bin <- cut(ground$t_var_freq, 
                              breaks=breaks, 
                              include.lowest=TRUE, 
@@ -299,13 +323,13 @@ test$t_var_freq_bin <- cut(test$t_var_freq,
 warning(paste0("For the purposes of this analysis, t_var_freq_bin is set to the ",opt$name_ground," files variant frequency bin values for accurate comparison."))
 
 test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(shared_variants, ground$var_tag),'t_var_freq_bin']
-
+}
 
 
 # Since we have two MAFs there is potential that there are two different purities between MAFs for the same samples
 ## To analyze recall on purity, we assume that the ground files purity is the purity which we wish to calculate recall over
 # Therefore we create a new variable to get the binned samples in the same bucket for comparison
-
+if(res["purity_bin"]){
     ground$purity_bin <- cut(ground$purity, 
                              breaks=breaks, 
                              include.lowest=TRUE, 
@@ -323,7 +347,9 @@ test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(share
     combined <- merge(tumor_sample_purity_mapping,testing_purity_maping,by="Tumor_Sample_Barcode",suffixes = c(opt$name_ground,opt$name_test))
     write.table(combined[which(combined[,paste0('purity_bin',opt$name_ground)] != combined[,paste0('purity_bin',opt$name_ground)] ),],file=paste0(directory,'logs/003.txt'),quote = FALSE) 
     test <- left_join(test[,colnames(test) %nin% c("purity_bin",'purity')],tumor_sample_purity_mapping,by = "Tumor_Sample_Barcode")
-  
+    test[is.na(test$purity_bin),'purity_bin'] <- 'N/A'
+    ground[is.na(ground$purity_bin),'purity_bin'] <- 'N/A'
+    }
 
 #### THIS SCRIPT UTILIZES n_variant_frequency AS AN INDICATOR THAT FILLOUTS HAS BEEN RUN, If fillouts has been run, performance measures are only run on detectable reads
 if(opt$fillout_to_pr){
@@ -353,10 +379,8 @@ i <- sapply(ground, is.factor)
 ground[i] <- lapply(ground[i], as.character)
 
 ### Clarity NA as a character NA for analysis
-test[is.na(test$clonality),'clonality'] <- 'N/A'
-ground[is.na(ground$clonality),'clonality'] <- 'N/A'
-test[is.na(test$purity_bin),'purity_bin'] <- 'N/A'
-ground[is.na(ground$purity_bin),'purity_bin'] <- 'N/A'
+
+
 
 
 ############################################
@@ -442,8 +466,7 @@ if(opt$fillouts){
 ############################################
 
 #####################RUN STATISTICS AND SAVE OUTPUTS####################
-variables_to_parse <- c('oncogenic_tf','clonality','substitutions','is_non_syn_mut','t_var_freq_bin',additional_variables,'purity_bin')
-
+variables_to_parse <- c('substitutions',additional_variables,names(res[res]))
 
 binned_variables <- variables_to_parse[grepl('bin',variables_to_parse)]
 
@@ -804,7 +827,8 @@ variable_parsing_and_graph_sample <- function(variable) {
 
 
 sample_variables_to_parse <- c('oncogenic_tf','clonality','substitutions','is_non_syn_mut','t_var_freq_bin', additional_variables)
-    
+res["purity_bin"] <- FALSE
+sample_variables_to_parse <- c('substitutions',additional_variables,names(res[res]))
 returning_null <- plyr::adply(sample_variables_to_parse, 1, variable_parsing_and_graph_sample, .parallel = T)
 
 ############################################
