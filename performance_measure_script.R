@@ -791,8 +791,7 @@ variable_parsing_and_graph_sample <- function(variable) {
     }
     return(sample_level_stats)
   })
-  write(variable,stderr())
-  
+
   sample_level_df <- do.call(rbind,sample_level_df)
   cols.nums <- c(seq(2,9,1),seq(11,13,1))
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
