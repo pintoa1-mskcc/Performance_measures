@@ -632,116 +632,117 @@ binned_vars <- plyr::adply(variables_to_parse, 1, variable_parsing_and_graph, .p
 ############################################
 
 ######## SPECIAL BINNED PLOTS ########
-binned_vars <- binned_vars %>% filter(type == 'all') %>% filter(permission == 'restrictive')
-purity_nas <- binned_vars[grepl('^N',binned_vars$purity_bin) & !is.na(binned_vars$purity_bin),]
-purity_nas$Variable_ID <- 'purity'
-
-binned_vars <- binned_vars %>% mutate(Variable_ID =  factor(ifelse(!is.na(t_var_freq_bin),'vaf',ifelse(!is.na(purity_bin),'purity',NA)) )) %>%
-  mutate(Frequency = factor(ifelse(!is.na(t_var_freq_bin),t_var_freq_bin,ifelse(!is.na(purity_bin),purity_bin,NA)),levels=tags)) %>% filter(!is.na(Frequency))
-vaf_mut_count <- ggplot(binned_vars[binned_vars$Variable_ID == 'vaf',], aes(x = Frequency, y = total_var_count)) +
-  geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + labs(y=NULL) +
-  theme(axis.text.x = element_blank(),legend.position = "none",axis.title.x = element_blank(),legend.background=element_blank(),legend.title=element_blank()) +
-  scale_x_discrete(labels = levels(binned_vars[binned_vars$Variable_ID == 'vaf','Frequency']),drop=FALSE) + annotate('text', label='VAF', x=Inf, y=Inf, hjust=1, vjust=1)+ labs(x=NULL)
-
-pur_sample_count <- ggplot(binned_vars[binned_vars$Variable_ID == 'purity',], aes(x = Frequency, y = n_samples)) +
-  geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + labs(y=NULL) +
-  theme(axis.text.x = element_blank(),axis.title.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-  scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) +annotate('text', label='Purity', x=Inf, y=Inf, hjust=1, vjust=1) 
-
-
-na_variant <- ggplot(purity_nas[purity_nas$Variable_ID == 'vaf',], aes(x = purity_bin, y = total_var_count)) +
-  geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + ylab('N Mutations') +
-  theme(axis.text.x = element_blank(),legend.position = "none",axis.title.x = element_blank(),legend.background=element_blank(),legend.title=element_blank()) +
-  scale_x_discrete(labels = c('N/A'),drop=FALSE) + annotate('text', label='VAF', x=-Inf, y=Inf, hjust=1, vjust=1)+ labs(x=NULL) + ylim(0,1)
-na_sample_count <- ggplot(purity_nas,aes(x = purity_bin, y = n_samples)) + geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() +
-  theme(axis.title.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-  scale_x_discrete(labels = levels(purity_nas[,'purity_bin']),drop=FALSE) + ylab("N Samples")
-
-if(opt$fillout_to_pr){
-
-  binned_vars_p <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_purity_bin_cohort_performance_measures.txt'), header = TRUE)
-  binned_vars_v <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_t_var_freq_bin_cohort_performance_measures.txt'), header = TRUE)
-  binned_vars_p$Variable_ID <- 'called_purity'
-  binned_vars_v$Frequency <- binned_vars_v$t_var_freq_bin
-  binned_vars_p$Frequency <- binned_vars_p$purity_bin
-  binned_vars_v$Variable_ID <- 'called_vaf'
-  shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','Frequency')
-  c_binned_vars <- rbind(binned_vars_p[,shared_cols],binned_vars_v[,shared_cols])
+if(res['t_var_freq_bin']){
+  binned_vars <- binned_vars %>% filter(type == 'all') %>% filter(permission == 'restrictive')
+  purity_nas <- binned_vars[grepl('^N',binned_vars$purity_bin) & !is.na(binned_vars$purity_bin),]
+  purity_nas$Variable_ID <- 'purity'
   
-
-  c_binned_vars <- c_binned_vars %>%   mutate(Frequency = factor(Frequency,levels=tags)) %>% 
-    filter(!is.na(Frequency)) %>% filter(type == 'all') %>% filter(permission == 'restrictive')
-  binned_vars <- binned_vars %>% mutate(Variable_ID =  factor(ifelse(!is.na(t_var_freq_bin),'genotyped_vaf',ifelse(!is.na(purity_bin),'genotyped_purity',NA)) ))
-  c_binned_vars$Genotyped <- 'Called'
-  binned_vars$Genotyped <- 'Genotyped'
-  binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars[,c('Genotyped',shared_cols)])
-
- purity_nas$Variable_ID <- 'genotyped_purity'
- purity_nas$Genotyped <- "Genotyped"
- binned_vars_p$Genotyped <- 'Called'
- shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','purity_bin')
- 
- c_purity_nas <- binned_vars_p[grepl('N/A',binned_vars_p$purity_bin),] %>% filter(type == 'all') %>% filter(permission == 'restrictive')
- purity_nas <- rbind(c_purity_nas[,c('Genotyped',shared_cols)],purity_nas[,c('Genotyped',shared_cols)])
-
-}
-binned_vars$Variable_ID <- as.character(binned_vars$Variable_ID)
-
-purity_nas$Variable_ID <- as.character(purity_nas$Variable_ID)
-colr_ids <- c(purity = "#374e55FF", vaf = "#DF8F44FF",genotyped_purity="#00A1D5FF",genotyped_vaf="#B24745FF",called_purity = "#374e55FF", called_vaf = "#DF8F44FF")
-colr_ids <- colr_ids[names(colr_ids) %in% binned_vars$Variable_ID]
-recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +  scale_color_manual(values=colr_ids) +
-  geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-  scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1) + labs(x=NULL,y = NULL)
-
-precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +   scale_color_manual(values=colr_ids) +
-  geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-  scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1)  + labs(x= NULL,y = NULL)
-
-na_recall_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'recall',] , aes(x = purity_bin, y = value,group = Variable_ID, color = Variable_ID)) + geom_point()  +    scale_color_manual(values=colr_ids) +
-  geom_errorbar(aes(ymin =lower, ymax = upper, width = 0)) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-  scale_x_discrete(labels = levels(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Recall')
-na_precision_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'precision',] , aes(x = purity_bin, y = value,group = Variable_ID, color = Variable_ID)) + geom_point()  +  scale_color_manual(values=colr_ids) +
-  geom_errorbar(aes(ymin =lower, ymax = upper, width = 0)) + theme_classic() +theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
-  scale_x_discrete(labels = unique(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Precision')  + labs(x=NULL)
-
-pgrid <- plot_grid(na_variant,vaf_mut_count,na_sample_count,pur_sample_count,na_recall_bin,recall_bin,na_precision_bin,precision_bin,ncol = 2, rel_widths = c(0.13,1),align = 'hv')
-x.grob <- textGrob("Frequency")
-pgrid <- grid.arrange(arrangeGrob(pgrid,bottom = x.grob))
-legend <- get_legend(precision_bin + theme(legend.position = "bottom"))
-p <- plot_grid(pgrid, legend, nrow = 2, rel_heights = c(1, .1))
-if(opt$multiqc){
+  binned_vars <- binned_vars %>% mutate(Variable_ID =  factor(ifelse(!is.na(t_var_freq_bin),'vaf',ifelse(!is.na(purity_bin),'purity',NA)) )) %>%
+    mutate(Frequency = factor(ifelse(!is.na(t_var_freq_bin),t_var_freq_bin,ifelse(!is.na(purity_bin),purity_bin,NA)),levels=tags)) %>% filter(!is.na(Frequency))
+  vaf_mut_count <- ggplot(binned_vars[binned_vars$Variable_ID == 'vaf',], aes(x = Frequency, y = total_var_count)) +
+    geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + labs(y=NULL) +
+    theme(axis.text.x = element_blank(),legend.position = "none",axis.title.x = element_blank(),legend.background=element_blank(),legend.title=element_blank()) +
+    scale_x_discrete(labels = levels(binned_vars[binned_vars$Variable_ID == 'vaf','Frequency']),drop=FALSE) + annotate('text', label='VAF', x=Inf, y=Inf, hjust=1, vjust=1)+ labs(x=NULL)
   
-  png(paste0(opt$mq_dir,'binned_vars_mqc.png'),width=1000)
-  print(p)
-  dev.off()
-
-    binned_vars_vaf <- binned_vars %>% filter(grepl('vaf',Variable_ID))
-    binned_vars_pur <- binned_vars %>% filter(grepl('purity',Variable_ID))
+  pur_sample_count <- ggplot(binned_vars[binned_vars$Variable_ID == 'purity',], aes(x = Frequency, y = n_samples)) +
+    geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + labs(y=NULL) +
+    theme(axis.text.x = element_blank(),axis.title.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+    scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) +annotate('text', label='Purity', x=Inf, y=Inf, hjust=1, vjust=1) 
   
-  colnames(binned_vars_vaf)[colnames(binned_vars_vaf) == 'Frequency'] <- 'VAF'
-  colnames(purity_nas)[colnames(purity_nas) == 'purity_bin']  <- 'Purity'
-  colnames(binned_vars_pur)[colnames(binned_vars_pur) == 'Frequency'] <- 'Purity'
-
-  shared_cols <- c('Variable_ID','Purity','permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')
+  
+  na_variant <- ggplot(purity_nas[purity_nas$Variable_ID == 'vaf',], aes(x = purity_bin, y = total_var_count)) +
+    geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() + ylab('N Mutations') +
+    theme(axis.text.x = element_blank(),legend.position = "none",axis.title.x = element_blank(),legend.background=element_blank(),legend.title=element_blank()) +
+    scale_x_discrete(labels = c('N/A'),drop=FALSE) + annotate('text', label='VAF', x=-Inf, y=Inf, hjust=1, vjust=1)+ labs(x=NULL) + ylim(0,1)
+  na_sample_count <- ggplot(purity_nas,aes(x = purity_bin, y = n_samples)) + geom_bar(stat='identity',position=position_dodge(),width=0.75) + theme_classic() +
+    theme(axis.title.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+    scale_x_discrete(labels = levels(purity_nas[,'purity_bin']),drop=FALSE) + ylab("N Samples")
+  
   if(opt$fillout_to_pr){
-    shared_cols <- c(shared_cols, 'Genotyped')
+  
+    binned_vars_p <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_purity_bin_cohort_performance_measures.txt'), header = TRUE)
+    binned_vars_v <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_t_var_freq_bin_cohort_performance_measures.txt'), header = TRUE)
+    binned_vars_p$Variable_ID <- 'called_purity'
+    binned_vars_v$Frequency <- binned_vars_v$t_var_freq_bin
+    binned_vars_p$Frequency <- binned_vars_p$purity_bin
+    binned_vars_v$Variable_ID <- 'called_vaf'
+    shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','Frequency')
+    c_binned_vars <- rbind(binned_vars_p[,shared_cols],binned_vars_v[,shared_cols])
+    
+  
+    c_binned_vars <- c_binned_vars %>%   mutate(Frequency = factor(Frequency,levels=tags)) %>% 
+      filter(!is.na(Frequency)) %>% filter(type == 'all') %>% filter(permission == 'restrictive')
+    binned_vars <- binned_vars %>% mutate(Variable_ID =  factor(ifelse(!is.na(t_var_freq_bin),'genotyped_vaf',ifelse(!is.na(purity_bin),'genotyped_purity',NA)) ))
+    c_binned_vars$Genotyped <- 'Called'
+    binned_vars$Genotyped <- 'Genotyped'
+    binned_vars <- rbind(binned_vars[,c('Genotyped',shared_cols)],c_binned_vars[,c('Genotyped',shared_cols)])
+  
+   purity_nas$Variable_ID <- 'genotyped_purity'
+   purity_nas$Genotyped <- "Genotyped"
+   binned_vars_p$Genotyped <- 'Called'
+   shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','purity_bin')
+   
+   c_purity_nas <- binned_vars_p[grepl('N/A',binned_vars_p$purity_bin),] %>% filter(type == 'all') %>% filter(permission == 'restrictive')
+   purity_nas <- rbind(c_purity_nas[,c('Genotyped',shared_cols)],purity_nas[,c('Genotyped',shared_cols)])
+  
+  }
+  binned_vars$Variable_ID <- as.character(binned_vars$Variable_ID)
+  
+  purity_nas$Variable_ID <- as.character(purity_nas$Variable_ID)
+  colr_ids <- c(purity = "#374e55FF", vaf = "#DF8F44FF",genotyped_purity="#00A1D5FF",genotyped_vaf="#B24745FF",called_purity = "#374e55FF", called_vaf = "#DF8F44FF")
+  colr_ids <- colr_ids[names(colr_ids) %in% binned_vars$Variable_ID]
+  recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +  scale_color_manual(values=colr_ids) +
+    geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+    scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1) + labs(x=NULL,y = NULL)
+  
+  precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +   scale_color_manual(values=colr_ids) +
+    geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+    scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1)  + labs(x= NULL,y = NULL)
+  
+  na_recall_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'recall',] , aes(x = purity_bin, y = value,group = Variable_ID, color = Variable_ID)) + geom_point()  +    scale_color_manual(values=colr_ids) +
+    geom_errorbar(aes(ymin =lower, ymax = upper, width = 0)) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+    scale_x_discrete(labels = levels(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Recall')
+  na_precision_bin <- ggplot(purity_nas[purity_nas$statistic_name == 'precision',] , aes(x = purity_bin, y = value,group = Variable_ID, color = Variable_ID)) + geom_point()  +  scale_color_manual(values=colr_ids) +
+    geom_errorbar(aes(ymin =lower, ymax = upper, width = 0)) + theme_classic() +theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
+    scale_x_discrete(labels = unique(purity_nas[,'purity_bin'])) + ylim(0,1) +  ylab('Precision')  + labs(x=NULL)
+  
+  pgrid <- plot_grid(na_variant,vaf_mut_count,na_sample_count,pur_sample_count,na_recall_bin,recall_bin,na_precision_bin,precision_bin,ncol = 2, rel_widths = c(0.13,1),align = 'hv')
+  x.grob <- textGrob("Frequency")
+  pgrid <- grid.arrange(arrangeGrob(pgrid,bottom = x.grob))
+  legend <- get_legend(precision_bin + theme(legend.position = "bottom"))
+  p <- plot_grid(pgrid, legend, nrow = 2, rel_heights = c(1, .1))
+  if(opt$multiqc){
+    
+    png(paste0(opt$mq_dir,'binned_vars_mqc.png'),width=1000)
+    print(p)
+    dev.off()
+  
+      binned_vars_vaf <- binned_vars %>% filter(grepl('vaf',Variable_ID))
+      binned_vars_pur <- binned_vars %>% filter(grepl('purity',Variable_ID))
+    
+    colnames(binned_vars_vaf)[colnames(binned_vars_vaf) == 'Frequency'] <- 'VAF'
+    colnames(purity_nas)[colnames(purity_nas) == 'purity_bin']  <- 'Purity'
+    colnames(binned_vars_pur)[colnames(binned_vars_pur) == 'Frequency'] <- 'Purity'
+  
+    shared_cols <- c('Variable_ID','Purity','permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')
+    if(opt$fillout_to_pr){
+      shared_cols <- c(shared_cols, 'Genotyped')
+    }
+  
+    
+    binned_vars_pur <- rbind(purity_nas[,shared_cols],binned_vars_pur[,shared_cols])
+    restruct_for_multiqc(binned_vars_vaf,'VAF','cohort',opt$mq_dir)
+    restruct_for_multiqc(binned_vars_pur,'Purity','cohort',opt$mq_dir)
+    
+  }
+  if(!opt$fillouts){
+    pdf(paste0(directory,'images/',out_prefix,'_binned_vars.pdf'))
+    
+      print(p)
+    dev.off()
   }
 
-  
-  binned_vars_pur <- rbind(purity_nas[,shared_cols],binned_vars_pur[,shared_cols])
-  restruct_for_multiqc(binned_vars_vaf,'VAF','cohort',opt$mq_dir)
-  restruct_for_multiqc(binned_vars_pur,'Purity','cohort',opt$mq_dir)
-  
 }
-if(!opt$fillouts){
-  pdf(paste0(directory,'images/',out_prefix,'_binned_vars.pdf'))
-  
-    print(p)
-  dev.off()
-}
-
-
 # ############################################
 
 # ########## SAMPLE LEVEL PLOTS #############
