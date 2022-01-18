@@ -60,6 +60,8 @@ Note: Runs on JUNO should be run with a scheduler. There are embedded bsubs for 
 [making_fillouts_mapping_file.R](./making_fillouts_mapping_file.R) 
 This script can help generate a TXT mapping file. Provide the directory containing the test OR ground BAMs, a TXT file with the Tumor - Normal Pair (expected header TUMOR_ID \t NORMAL_ID), and the name of the output file. 
 
+`Rscript  making_fillouts_mapping_file.R --bam_dir /juno/work/tempo/wes_repo/Results/v1.4.x/cohort_level/CCS_NFCXOZVP/bams/ --mapping example_inputs/CCS_NFCXOZVP.cohort.txt --output_file example_inputs/CCS_bam_mapping_for_fillouts.txt`
+
 Sym links are not functional when genotyping. 
 
 ## Required R packages
