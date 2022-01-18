@@ -21,7 +21,7 @@ doParallel::registerDoParallel(cores = 4)
 
 ############  REQUIRED FUNCTIONS ############ 
 set.seed(123) 
-oncokb <- fromJSON(readLines('http://oncokb.org/api/v1/genes', warn=F))
+#oncokb <- fromJSON(readLines('http://oncokb.org/api/v1/genes', warn=F))
 source("performance_measure_custom_functions.R")
 
 ############################################
