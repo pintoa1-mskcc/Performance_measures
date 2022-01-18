@@ -38,7 +38,7 @@ Choice of ground and test files determines your recall and precision metrics. Yo
 ```
 
 ## Examples
-Note: Runs on JUNO should be run with a scheduler. There are embedded bsbus for fillouts and multiqc runs. 
+Note: Runs on JUNO should be run with a scheduler. There are embedded bsubs for fillouts and multiqc runs. 
 
 ### Basic Run:
 
