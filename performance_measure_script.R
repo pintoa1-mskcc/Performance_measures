@@ -843,29 +843,31 @@ returning_null <- plyr::adply(sample_variables_to_parse, 1, variable_parsing_and
 ############################################
 
 ##### PR CURVE
-pr_curve_df <- left_join(sample_level_raw[sample_level_raw$type == 'all',],ground %>% select(c(Tumor_Sample_Barcode, purity)) %>% distinct(), by = "Tumor_Sample_Barcode")
-
-pr_curve_df <- pr_curve_df %>% filter(statistic_name %in% c('recall','precision')) %>% filter(permission == 'restrictive') %>%
-  select(c(statistic_name,value,Tumor_Sample_Barcode,purity)) %>% distinct(statistic_name,value,Tumor_Sample_Barcode,purity) %>%
-  pivot_wider(id_cols= c(Tumor_Sample_Barcode, purity),names_from = statistic_name, values_from =  value) 
+if(res['purity_bin']){
+  pr_curve_df <- left_join(sample_level_raw[sample_level_raw$type == 'all',],ground %>% select(c(Tumor_Sample_Barcode, purity)) %>% distinct(), by = "Tumor_Sample_Barcode")
   
-if(!opt$fillouts){
-  if(opt$multiqc){
-    png(paste0(opt$mq_dir,'precision_recall_plot_mqc.png'),width=600)
-    ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
-      theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
-      ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
-    dev.off()
+  pr_curve_df <- pr_curve_df %>% filter(statistic_name %in% c('recall','precision')) %>% filter(permission == 'restrictive') %>%
+    select(c(statistic_name,value,Tumor_Sample_Barcode,purity)) %>% distinct(statistic_name,value,Tumor_Sample_Barcode,purity) %>%
+    pivot_wider(id_cols= c(Tumor_Sample_Barcode, purity),names_from = statistic_name, values_from =  value) 
     
+  if(!opt$fillouts){
+    if(opt$multiqc){
+      png(paste0(opt$mq_dir,'precision_recall_plot_mqc.png'),width=600)
+      ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
+        theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
+        ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
+      dev.off()
+      
+    }
+  
+    
+    pdf(paste0(directory,'images/',out_prefix,'_precision_recall_plot.pdf'))
+    
+      ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
+        theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
+        ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
+    dev.off()
   }
-
-  
-  pdf(paste0(directory,'images/',out_prefix,'_precision_recall_plot.pdf'))
-  
-    ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
-      theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
-      ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
-  dev.off()
 }
 ############################################
 
