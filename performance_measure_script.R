@@ -198,7 +198,7 @@ if(!is.null(opt$bed)){
                    check.zero.based = FALSE,
                    check.valid = FALSE,
                    check.sort = FALSE,
-                   check.merge = FALSE,outputFile = paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed'),verbose = TRUE))
+                   check.merge = FALSE,outputFile = paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed'),verbose = TRUE),silent = TRUE)
 
   
   ground_bed <- ground[,c('Chromosome','Start_Position','End_Position','bed_tag')] 
@@ -207,7 +207,7 @@ if(!is.null(opt$bed)){
             check.zero.based = FALSE,
             check.valid = FALSE,
             check.sort = FALSE,
-            check.merge = FALSE,outputFile = paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),verbose = TRUE))
+            check.merge = FALSE,outputFile = paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),verbose = TRUE),silent = TRUE)
   
   bed_ground <- fread(paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),data.table = FALSE)
   bed_test <-  fread(paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed'),data.table = FALSE)
