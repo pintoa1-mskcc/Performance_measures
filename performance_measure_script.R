@@ -401,10 +401,13 @@ ground[i] <- lapply(ground[i], as.character)
 if(opt$fillouts){
   ground_tmp <- ground
   test_tmp <- test
+  
+  
   colnames(ground_tmp)[grepl('^t_',colnames(ground_tmp))] <- paste0(colnames(ground_tmp)[grepl('^t_',colnames(ground_tmp))],'_called_ground')
   colnames(test_tmp)[grepl('^t_',colnames(test_tmp))] <- paste0(colnames(test_tmp)[grepl('^t_',colnames(test_tmp))],'_called_test')
   
-  
+  ground_tmp[,'t_ref_count'] <- ground$t_ref_count
+  ground_tmp[,'t_alt_count'] <- ground$t_alt_count
   fillout_maf <- merge(ground_tmp,test_tmp[test_tmp$var_tag %in% shared_variants,c('var_tag', colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)])],by ='var_tag',all.x=TRUE)
   test_tmp2 <- test_tmp[test_tmp$var_tag %nin% shared_variants,]
   fillout_maf <- bind_rows(fillout_maf,test_tmp2)
@@ -702,11 +705,11 @@ if(res['t_var_freq_bin']){
   purity_nas$Variable_ID <- as.character(purity_nas$Variable_ID)
   colr_ids <- c(purity = "#374e55FF", vaf = "#DF8F44FF",genotyped_purity="#00A1D5FF",genotyped_vaf="#B24745FF",called_purity = "#374e55FF", called_vaf = "#DF8F44FF")
   colr_ids <- colr_ids[names(colr_ids) %in% binned_vars$Variable_ID]
-  recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +  scale_color_manual(values=colr_ids) +
+  recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line()  +  scale_color_manual(values=colr_ids) +
     geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
     scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1) + labs(x=NULL,y = NULL)
   
-  precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +   scale_color_manual(values=colr_ids) +
+  precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line()  +   scale_color_manual(values=colr_ids) +
     geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
     scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1)  + labs(x= NULL,y = NULL)
   
