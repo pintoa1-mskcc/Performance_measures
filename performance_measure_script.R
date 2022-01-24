@@ -93,10 +93,12 @@ write(paste0("Ground file: ", opt$ground),stderr())
 write(paste0("Test file: ", opt$test),stderr())
 
 directory <-  opt$directory <- ifelse(opt$directory == getwd(),paste0(opt$directory,'/'),ifelse(grepl("^/",opt$directory),paste0(opt$directory,'/'),paste0(getwd(),'/',opt$directory,'/')))
-dir.create(directory)
-dir.create(paste0(directory,'images/'))
-dir.create(paste0(directory,'logs/'))
-dir.create(paste0(directory,'results/'))
+if(!opt$fillout_to_pr){
+  dir.create(directory)
+  dir.create(paste0(directory,'images/'))
+  dir.create(paste0(directory,'logs/'))
+  dir.create(paste0(directory,'results/'))
+}
 
 write(paste0("Output directory: ",directory),stderr())
 
@@ -170,7 +172,10 @@ if(any(c(missing_in_test,missing_in_ground))) {
 #Keep test tumor samples which are not misisngi n ground 
 all_samples <- unique(c(test$Tumor_Sample_Barcode, ground$Tumor_Sample_Barcode))
 names(all_samples) <- all_samples
-
+if(opt$fillout_to_pr){
+  test$t_var_freq <- test$genotyped_variant_freq
+  ground$t_var_freq <- ground$genotyped_variant_freq
+}
 ### CHECK FOR ALL REQUIRED FLAGS
 needed_flags <- c('cf','purity','oncogenic','Variant_Classification','t_var_freq')
 res <- sapply(needed_flags,function(variable){
@@ -832,7 +837,6 @@ variable_parsing_and_graph_sample <- function(variable) {
             c_df <- c_df %>% filter(type == 'all')
           } 
         } 
-        write(variable,stderr())
         df1 <- rbind(df1,c_df)
       }
       
@@ -933,7 +937,7 @@ if (opt$fillouts){
     
     out_prefix <- str_replace(out_prefix,'fillout_','')
     colnames(ground)[grepl('^t_',colnames(ground))] <- paste0(colnames(ground)[grepl('^t_',colnames(ground))],'_genotyped_ground')
-    colnames(test)[grepl('^t_',colnames(test))] <- paste0(colnames(test)[grepl('^t_',colnames(test_tmp))],'_genotyped_test')
+    colnames(test)[grepl('^t_',colnames(test))] <- paste0(colnames(test)[grepl('^t_',colnames(test))],'_genotyped_test')
     
     ground <- merge(ground,test[,c('var_tag', colnames(test)[colnames(test) %nin% colnames(ground)])],by = 'var_tag', all = TRUE)
     
