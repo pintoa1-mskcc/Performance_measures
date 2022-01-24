@@ -124,6 +124,8 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
         vars_with_no_evidence_in_either_test_or_ground <- length(unique(ground_set$TAG[!ground_set$evidence & ground_set$TAG %in%  test_set$TAG[!test_set$evidence]]))
         
       }
+      total_var_count <- tps + fps + fns + ground_set_no_ev_not_detect + test_set_no_ev_not_detect + vars_with_no_evidence_in_either_test_or_ground
+      
       
     } else{
       if(permission == 'restrictive'){
@@ -138,11 +140,12 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
       tps <- length(test_set_tags[test_set_tags %in% ground_set_tags])
       fps <- length(test_set_tags[test_set_tags %nin% ground_set_tags])
       fns <- length(ground_set_tags[ground_set_tags %nin% test_set_tags])
-      test_set_no_ev_not_detect <- 0 
-      ground_set_no_ev_not_detect <- 0 
-      vars_with_no_evidence_in_either_test_or_ground <- 0
+      test_set_no_ev_not_detect <- NA
+      ground_set_no_ev_not_detect <- NA
+      vars_with_no_evidence_in_either_test_or_ground <- NA
+      total_var_count <- tps + fps + fns
+      
     }
-    total_var_count <- tps + fps + fns + ground_set_no_ev_not_detect + test_set_no_ev_not_detect + vars_with_no_evidence_in_either_test_or_ground
     
     precision <- tps / (tps + fps)
     recall <- tps / (tps + fns)
@@ -166,7 +169,7 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
       
     } else {
       f1_confidence <- rep(NA,2)
-    }
+    } 
     repo <- c(permission,total_var_count,n_samples,tps,fps,fns,ground_set_no_ev_not_detect,test_set_no_ev_not_detect,vars_with_no_evidence_in_either_test_or_ground)
     stats_p <- c(repo,'precision',precision,bin_conf_precision$lower,bin_conf_precision$upper)
     stats_r <- c(repo,'recall', recall,bin_conf_recall$lower,bin_conf_recall$upper)
@@ -308,6 +311,9 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     }else {
       tmp3 <- tmp3[,c('ID',variable,'n_samples',statistics_to_parse)]
     }
+    
+    suppressWarnings(cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv')))
+    write.table(tmp3,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE)
   } else {
     df$ID <- paste(df$Tumor_Sample_Barcode,df[,variable], sep = '/')
     
@@ -338,9 +344,11 @@ restruct_for_multiqc <- function(df,variable,level,directory){
       tmp3 <- tmp3 %>% separate(ID, c('Tumor_Sample_Barcode',variable), "/",remove = FALSE)
       tmp3 <- tmp3[,c('ID','Tumor_Sample_Barcode',variable,statistics_to_parse)]
     }
-
+    if(nrow(tmp3) <= 500){
+      suppressWarnings(cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv')))
+      write.table(tmp3,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE)
+    }
   }
-  suppressWarnings(cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv')))
-  write.table(tmp3,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE)
+  
 
 }
