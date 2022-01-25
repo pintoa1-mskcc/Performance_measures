@@ -370,6 +370,11 @@ if(res["purity_bin"]){
 
 #### THIS SCRIPT UTILIZES n_variant_frequency AS AN INDICATOR THAT FILLOUTS HAS BEEN RUN, If fillouts has been run, performance measures are only run on detectable reads
 if(opt$fillout_to_pr){
+  test <- test %>% mutate(evidence = ifelse(t_alt_count >= 1, TRUE, FALSE))
+  test <- test %>% mutate(detectable = ifelse(t_total_count >= 20, TRUE, FALSE))
+  
+  ground <- ground %>% mutate(evidence = ifelse(t_alt_count >= 1, TRUE, FALSE))
+  ground <- ground %>% mutate(detectable = ifelse(t_total_count >= 20, TRUE, FALSE))
   test <- test %>% mutate(evidence_in_test = ifelse(t_alt_count >= 1, TRUE, FALSE))
   test <- test %>% mutate(detectable_in_test = ifelse(t_total_count >= 20, TRUE, FALSE))
   
@@ -936,11 +941,11 @@ if (opt$fillouts){
   if(opt$fillout_to_pr){
     
     out_prefix <- str_replace(out_prefix,'fillout_','')
-    colnames(ground)[grepl('^t_',colnames(ground))] <- paste0(colnames(ground)[grepl('^t_',colnames(ground))],'_genotyped_ground')
-    colnames(test)[grepl('^t_',colnames(test))] <- paste0(colnames(test)[grepl('^t_',colnames(test))],'_genotyped_test')
+    colnames(ground)[grepl('^t_',colnames(ground)) & !grepl('called',colnames(ground))] <- paste0(colnames(ground)[grepl('^t_',colnames(ground))& !grepl('called',colnames(ground))],'_genotyped_ground')
+    colnames(test)[grepl('^t_',colnames(test)) & !grepl('called',colnames(test))] <-  paste0(colnames(test)[grepl('^t_',colnames(test))& !grepl('called',colnames(ground))],'_genotyped_test')
     
     ground <- merge(ground,test[,c('var_tag', colnames(test)[colnames(test) %nin% colnames(ground)])],by = 'var_tag', all = TRUE)
-    
+    write(colnames(ground),file = "temproary_check_for_colnames.txt")
     write.table(ground,paste0(directory,out_prefix,'_genotyped_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   
     

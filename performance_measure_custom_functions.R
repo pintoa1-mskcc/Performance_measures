@@ -124,8 +124,8 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
         vars_with_no_evidence_in_either_test_or_ground <- length(unique(ground_set$TAG[!ground_set$evidence & ground_set$TAG %in%  test_set$TAG[!test_set$evidence]]))
         
       }
+
       total_var_count <- tps + fps + fns + ground_set_no_ev_not_detect + test_set_no_ev_not_detect + vars_with_no_evidence_in_either_test_or_ground
-      
       
     } else{
       if(permission == 'restrictive'){
@@ -143,10 +143,9 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
       test_set_no_ev_not_detect <- NA
       ground_set_no_ev_not_detect <- NA
       vars_with_no_evidence_in_either_test_or_ground <- NA
-      total_var_count <- tps + fps + fns
+      total_var_count <- tps + fps + fns 
       
     }
-    
     precision <- tps / (tps + fps)
     recall <- tps / (tps + fns)
     f1 <- (2 * precision * recall)/(precision + recall)
