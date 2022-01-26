@@ -945,6 +945,10 @@ if (opt$fillouts){
     colnames(test)[grepl('^t_',colnames(test)) & !grepl('called',colnames(test))] <-  paste0(colnames(test)[grepl('^t_',colnames(test))& !grepl('called',colnames(test))],'_genotyped_test')
     
     ground <- merge(ground,test[,c('var_tag', colnames(test)[colnames(test) %nin% colnames(ground)])],by = 'var_tag', all = TRUE)
+    ground$evidence <- NULL
+    ground$detectable <- NULL
+    front_oreder_of_maf <- c('Hugo_Symbol','Chromosome','Start_Position','End_Position')
+    ground <- ground[.c(front_oreder_of_maf,sort(colnames(ground)[colnames(ground) %nin% front_oreder_of_maf]))]
     write(colnames(ground),file = "temproary_check_for_colnames.txt")
     write.table(ground,paste0(directory,out_prefix,'_genotyped_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   
