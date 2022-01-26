@@ -375,11 +375,11 @@ if(opt$fillout_to_pr){
   
   ground <- ground %>% mutate(evidence = ifelse(t_alt_count >= 1, TRUE, FALSE))
   ground <- ground %>% mutate(detectable = ifelse(t_total_count >= 20, TRUE, FALSE))
-  test <- test %>% mutate(evidence_in_test = ifelse(t_alt_count >= 1, TRUE, FALSE))
-  test <- test %>% mutate(detectable_in_test = ifelse(t_total_count >= 20, TRUE, FALSE))
+  test <- test %>% mutate(Evidence_in_Test = ifelse(t_alt_count >= 1, TRUE, FALSE))
+  test <- test %>% mutate(Detectable_in_Test = ifelse(t_total_count >= 20, TRUE, FALSE))
   
-  ground <- ground %>% mutate(evidence_in_ground = ifelse(t_alt_count >= 1, TRUE, FALSE))
-  ground <- ground %>% mutate(detectable_in_ground = ifelse(t_total_count >= 20, TRUE, FALSE))
+  ground <- ground %>% mutate(Evidence_in_Ground = ifelse(t_alt_count >= 1, TRUE, FALSE))
+  ground <- ground %>% mutate(Detectable_in_Ground = ifelse(t_total_count >= 20, TRUE, FALSE))
       
       test <- test %>% mutate(Detectable_in_Ground = ifelse(var_tag %in% ground$var_tag[ground$detectable] , TRUE, FALSE))
       ground <- ground %>% mutate(Detectable_in_Test = ifelse(var_tag %in% test$var_tag[test$detectable], TRUE, FALSE))
@@ -942,7 +942,7 @@ if (opt$fillouts){
     
     out_prefix <- str_replace(out_prefix,'fillout_','')
     colnames(ground)[grepl('^t_',colnames(ground)) & !grepl('called',colnames(ground))] <- paste0(colnames(ground)[grepl('^t_',colnames(ground))& !grepl('called',colnames(ground))],'_genotyped_ground')
-    colnames(test)[grepl('^t_',colnames(test)) & !grepl('called',colnames(test))] <-  paste0(colnames(test)[grepl('^t_',colnames(test))& !grepl('called',colnames(ground))],'_genotyped_test')
+    colnames(test)[grepl('^t_',colnames(test)) & !grepl('called',colnames(test))] <-  paste0(colnames(test)[grepl('^t_',colnames(test))& !grepl('called',colnames(test))],'_genotyped_test')
     
     ground <- merge(ground,test[,c('var_tag', colnames(test)[colnames(test) %nin% colnames(ground)])],by = 'var_tag', all = TRUE)
     write(colnames(ground),file = "temproary_check_for_colnames.txt")
