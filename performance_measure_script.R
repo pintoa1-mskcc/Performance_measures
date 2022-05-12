@@ -39,7 +39,7 @@ parser$add_argument('-s','--name_test', type = 'character', default = NULL, help
 parser$add_argument('-d','--directory', type='character', default = getwd(),
                     help='OPTIONAL output directory [default = current working directory ]')
 parser$add_argument('-v','--additional_variables', type='character',  default = NULL,
-                    help= 'OPTIONAL dditional columns from MAFs which you would like to run recall and precision. This is a single value or a comma separated list if there is more than one. Additional vars MUST be categorical')
+                    help= 'OPTIONAL additional columns from MAFs which you would like to run recall and precision. This is a single value or a comma separated list if there is more than one. Additional vars MUST be categorical')
 parser$add_argument("-o", "--out_prefix", type="character", default="date()",
               help="Optional. output file name basename [default= Sys.time()]")
 parser$add_argument('-f','--fillouts', action='store_true',help = 'Optional. RUN fillouts')
@@ -226,10 +226,10 @@ if(!is.null(opt$bed)){
 
 
 ### Make tag ids, var_tag is restrictive, TAG is permissive mode
-ground<- ground %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_Position,':',Reference_Allele,':',Tumor_Seq_Allele2,':',Tumor_Sample_Barcode),
-                           TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode))
-test <- test  %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_Position,':',Reference_Allele,':',Tumor_Seq_Allele2,':',Tumor_Sample_Barcode), 
-                         TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode))
+#ground<- ground %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_Position,':',Reference_Allele,':',Tumor_Seq_Allele2,':',Tumor_Sample_Barcode),
+ #                          TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode))
+#test <- test  %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_Position,':',Reference_Allele,':',Tumor_Seq_Allele2,':',Tumor_Sample_Barcode), 
+#                         TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode))
 shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
 if(res['oncogenic_tf']){
 ground <- ground %>%  mutate(oncogenic_tf =ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER'))
