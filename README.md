@@ -56,7 +56,7 @@ Note: Runs on JUNO should be run with a scheduler. There are embedded bsubs for 
 `Rscript performance_measure_script.R -t test.maf -g ground.maf -n DRAGEN -s TEMPO -f -r ground_bam_mapping_for_fillouts.txt -e test_bam_mapping_for_fillouts.txt -b IMPACT468_b37.bed -d fillouts_mqc_bed_run_dir_0`
 
 ### LSF Submission:
-bsub -o . -n 4 -R "rusage[mem=4]" 'Rscript performance_measure_script.R -t test.maf -g ground.maf -n DRAGEN -s TEMPO -f -r ground_bam_mapping_for_fillouts.txt -e test_bam_mapping_for_fillouts.txt -b IMPACT468_b37.bed -d fillouts_mqc_bed_run_dir_0'
+`bsub -o . -n 4 -R "rusage[mem=4]" -W 200:00 'Rscript performance_measure_script.R -t test.maf -g ground.maf -n DRAGEN -s TEMPO -f -r ground_bam_mapping_for_fillouts.txt -e test_bam_mapping_for_fillouts.txt -b IMPACT468_b37.bed -d fillouts_mqc_bed_run_dir_0'`
 
 ### Helper Script
 [making_fillouts_mapping_file.R](./making_fillouts_mapping_file.R) 
