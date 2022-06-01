@@ -17,7 +17,7 @@ suppressPackageStartupMessages({library(dplyr)
   })
 
 ############################################
-doParallel::registerDoParallel(cores = 4)
+#doParallel::registerDoParallel(cores = 4)
 
 ############  REQUIRED FUNCTIONS ############ 
 set.seed(123) 
@@ -66,8 +66,8 @@ if(opt$fillouts){
   }
 }
 
-test <- fread(opt$test,data.table = FALSE)
-ground <- fread(opt$ground,data.table = FALSE)
+test <- fread(opt$test,data.table = FALSE,verbose = T)
+ground <- fread(opt$ground,data.table = FALSE,verbose = T)
 
 if(!is.null(opt$bed)){
   library(bedr)
@@ -262,7 +262,7 @@ test$clonality <- as.character(test$clonality)
 test[is.na(test$clonality),'clonality'] <- 'N/A'
 ground[is.na(ground$clonality),'clonality'] <- 'N/A'
 }
-
+print("GOT HEREEEEEEE : 1")
 if(res["is_non_syn_mut"]){
 ground <- ground %>% mutate(is_non_syn_mut = ifelse(Variant_Classification %in% c("Missense_Mutation", 
                                                                "Nonsense_Mutation", 
@@ -300,6 +300,7 @@ test <- test %>% mutate(ref_to_alt = paste(Reference_Allele,Tumor_Seq_Allele2,se
                       "C>A" ="C>A" , "G>T" = "C>A" , "C>G" = "C>G","G>C" = "C>G", "C>T" = "C>T","G>A" = "C>T")
     return(new_sub) 
   }))) %>%  mutate_cond(Variant_Type == 'SNP', Variant_Type = 'SNV')
+print("GOT HEREEEEEEE : 2")
 
 ground <- ground %>% mutate(ref_to_alt = paste(Reference_Allele,Tumor_Seq_Allele2,sep=">")) %>%
   mutate(substitutions = ifelse( Variant_Type %nin% c('SNP','SNV'), NA,sapply( ref_to_alt,function(ref_to_alt ) {
@@ -334,9 +335,11 @@ test$t_var_freq_bin <- cut(test$t_var_freq,
 # idnetify shared variants which have differing 't_var_freq_bin'
 # For purposes of recall, assume that ground t_var_freq_bins are the 'correct' variables so set those test values to that
 warning(paste0("For the purposes of this analysis, t_var_freq_bin is set to the ",opt$name_ground," files variant frequency bin values for accurate comparison."))
+print("GOT HEREEEEEEE : 3")
 
 test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(shared_variants, ground$var_tag),'t_var_freq_bin']
 }
+print("GOT HEREEEEEEE : 4")
 
 
 # Since we have two MAFs there is potential that there are two different purities between MAFs for the same samples
@@ -353,7 +356,8 @@ if(res["purity_bin"]){
                              include.lowest=TRUE, 
                              right=FALSE, 
                              labels=tags)
-
+    print("GOT HEREEEEEEE : 5")
+    
     tumor_sample_purity_mapping <- ground %>% distinct(Tumor_Sample_Barcode, purity_bin,purity) 
     warning(paste0("For the purposes of this analysis, purity is set to the ",opt$name_ground," files purity values for accurate comparison. See 003.txt for samples which have differing purities between ", opt$name_ground, " and ", opt$name_test))
     testing_purity_maping <- test %>% distinct(Tumor_Sample_Barcode,purity_bin,purity)
@@ -401,6 +405,7 @@ test[i] <- lapply(test[i], as.character)
 i <- sapply(ground, is.factor)
 ground[i] <- lapply(ground[i], as.character)
 
+print("GOT HEREEEEEEE : 6")
 
 
 
@@ -491,7 +496,7 @@ if(opt$fillouts){
   
   write(paste0("Submitting: ", length(all_samples)*2, " jobs."),stderr())
   
-  queued_jobs <- plyr::adply(all_samples, 1, fillout_commands, .parallel = T)
+  queued_jobs <- plyr::adply(all_samples, 1, fillout_commands, .parallel = F)
   
   write(paste0("Queued: ", dim(queued_jobs)[1]*2, " jobs."),stderr())
   
@@ -582,9 +587,12 @@ if(!is.null(opt$bed_file)){
 }
 
 overview_df <- calc_stats_by_variant_type(ground,test,'cohort')
+print("GOT HEREEEEEEE : 7")
+
 overview_df <- overview_df[,c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 write.table(overview_df,paste0(directory,'results/',out_prefix,'_overview_all_variants_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
 overview_df <- overview_df[overview_df$permission == 'restrictive',]
+print("GOT HEREEEEEEE : 8")
 
 
 if(opt$fillout_to_pr){
@@ -650,7 +658,8 @@ variable_parsing_and_graph <- function(variable) {
   }
 }
 
-binned_vars <- plyr::adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = T)
+binned_vars <- plyr::adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = F)
+print("GOT HEREEEEEEE : 9")
 
 
 ############################################
@@ -770,6 +779,7 @@ if(res['t_var_freq_bin']){
 # ############################################
 
 # ########## SAMPLE LEVEL PLOTS #############
+print("GOT HEREEEEEEE : 10")
 
 sample_level_raw <- lapply(all_samples, function(sample){
   sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
@@ -857,15 +867,18 @@ variable_parsing_and_graph_sample <- function(variable) {
   return(NULL)
 }
 
+print("GOT HEREEEEEEE : 11")
 
 sample_variables_to_parse <- c('oncogenic_tf','clonality','substitutions','is_non_syn_mut','t_var_freq_bin', additional_variables)
 res["purity_bin"] <- FALSE
 sample_variables_to_parse <- c('substitutions',additional_variables,names(res[res]))
-returning_null <- plyr::adply(sample_variables_to_parse, 1, variable_parsing_and_graph_sample, .parallel = T)
+returning_null <- plyr::adply(sample_variables_to_parse, 1, variable_parsing_and_graph_sample, .parallel = F)
 
 ############################################
 
 ##### PR CURVE
+print("GOT HEREEEEEEE : 12")
+
 if(res['purity_bin']){
   pr_curve_df <- left_join(sample_level_raw[sample_level_raw$type == 'all',],ground %>% select(c(Tumor_Sample_Barcode, purity)) %>% distinct(), by = "Tumor_Sample_Barcode")
   

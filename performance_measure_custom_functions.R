@@ -21,11 +21,14 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
     test_df <- test_df[test_df$Variant_Type == 'SNV',]
   }
   
-  levels_from_variable_id <- unique(c(ground_df[,variable_id],test_df[,variable_id]))
+  levels_from_variable_id <- unlist(unique(c(ground_df[,variable_id],test_df[,variable_id])))
   levels_from_variable_id <- levels_from_variable_id[!is.na(levels_from_variable_id)]
+  levels_from_variable_id <- levels_from_variable_id[!is.null(levels_from_variable_id)]
+  print(levels_from_variable_id)
   names(levels_from_variable_id) <- levels_from_variable_id
-  
+  print(variable_id)
   variable_id_stats <- lapply(levels_from_variable_id, function(id) {
+    print(id)
     targeted_ground <- ground_df %>% filter(get(variable_id) == id) 
     targeted_test <- test_df %>% filter(get(variable_id) == id) 
     if(variable_id == 'substitutions'){
@@ -51,7 +54,6 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
 calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
   variant_types <- unique(c('all','indel',ground$Variant_Type,test$Variant_Type))
   output1 <- lapply(variant_types, function(type) {
-    
     if(type == 'all'){
       targ_g <- ground
       targ_t <- test
@@ -149,26 +151,26 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
     precision <- tps / (tps + fps)
     recall <- tps / (tps + fns)
     f1 <- (2 * precision * recall)/(precision + recall)
-    
     bin_conf_recall <- binom.confint(tps,(tps + fns), conf.level = 0.95, method = 'wilson')
     bin_conf_precision <- binom.confint(tps,(tps + fps), conf.level = 0.95, method = 'wilson')
     # If cohort level bootstrap, if not return NA
-    if (grepl('cohort',type_of_analysis)){
-      mySample =c(rep("TP", tps), rep("FN", fns), rep("FP", fps))
-      getHarm = function(){
-        g = sample(mySample, replace=TRUE)
-        Recall <- sum(g=="TP")/(sum("TP"==g) + sum("FN" == g))
-        Precision <- sum(g=="TP")/(sum("TP"==g) + sum("FP" == g))
-        (2 * (Recall * Precision)) / (Precision + Recall)
-      }
-      
-      mf_harmonic_F1 = replicate(n = 1000, getHarm())
-      
-      f1_confidence <- quantile(mf_harmonic_F1,c(0.025,0.975),na.rm = TRUE)
-      
-    } else {
+    # if (grepl('cohort',type_of_analysis)){
+    #   print(paste0("TP: ",tps, " fn: ",fns, " fps :",fps))
+    #   mySample =c(rep("TP", tps), rep("FN", fns), rep("FP", fps))
+    #   getHarm = function(){
+    #     g = sample(mySample, replace=TRUE)
+    #     Recall <- sum(g=="TP")/(sum("TP"==g) + sum("FN" == g))
+    #     Precision <- sum(g=="TP")/(sum("TP"==g) + sum("FP" == g))
+    #     (2 * (Recall * Precision)) / (Precision + Recall)
+    #   }
+    #   ### I AM REDUCING NUMBER OF REPLICATES
+    #   mf_harmonic_F1 = replicate(n = 100, getHarm())
+    #   print("got bootstrapping")
+    #   f1_confidence <- quantile(mf_harmonic_F1,c(0.025,0.975),na.rm = TRUE)
+    #   
+    # } else {
       f1_confidence <- rep(NA,2)
-    } 
+    # } 
     repo <- c(permission,total_var_count,n_samples,tps,fps,fns,ground_set_no_ev_not_detect,test_set_no_ev_not_detect,vars_with_no_evidence_in_either_test_or_ground)
     stats_p <- c(repo,'precision',precision,bin_conf_precision$lower,bin_conf_precision$upper)
     stats_r <- c(repo,'recall', recall,bin_conf_recall$lower,bin_conf_recall$upper)
