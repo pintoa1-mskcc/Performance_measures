@@ -28,12 +28,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'type':
         title: "Variant Type"
@@ -94,12 +97,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -169,12 +175,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'on_target':
         title: "On Target"
@@ -235,12 +244,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -303,12 +315,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -369,12 +384,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'clonality':
         title: "Clonality"
@@ -437,12 +455,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -505,12 +526,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -573,12 +597,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -637,12 +664,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -701,12 +731,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -770,12 +803,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -864,12 +900,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"
@@ -928,12 +967,15 @@ custom_data:
     headers:
       'vars_with_no_evidence_in_either_test_or_ground':
         title: 'Variants No evidence in Test+Ground'
+        format: '{:,.0f}'
         placement: 1400
       'ground_set_no_ev_not_detect':
         title: "Variants not detectable in Ground"
+        format: '{:,.0f}'
         placement: 1350
       'test_set_no_ev_not_detect':
         title: "Variants not detectable in Test"
+        format: '{:,.0f}'
         placement: 1300
       'Genotyped':
         title: "Version"

@@ -93,10 +93,12 @@ write(paste0("Ground file: ", opt$ground),stderr())
 write(paste0("Test file: ", opt$test),stderr())
 
 directory <-  opt$directory <- ifelse(opt$directory == getwd(),paste0(opt$directory,'/'),ifelse(grepl("^/",opt$directory),paste0(opt$directory,'/'),paste0(getwd(),'/',opt$directory,'/')))
-dir.create(directory)
-dir.create(paste0(directory,'images/'))
-dir.create(paste0(directory,'logs/'))
-dir.create(paste0(directory,'results/'))
+if(!opt$fillout_to_pr){
+  dir.create(directory)
+  dir.create(paste0(directory,'images/'))
+  dir.create(paste0(directory,'logs/'))
+  dir.create(paste0(directory,'results/'))
+}
 
 write(paste0("Output directory: ",directory),stderr())
 
@@ -170,7 +172,10 @@ if(any(c(missing_in_test,missing_in_ground))) {
 #Keep test tumor samples which are not misisngi n ground 
 all_samples <- unique(c(test$Tumor_Sample_Barcode, ground$Tumor_Sample_Barcode))
 names(all_samples) <- all_samples
-
+if(opt$fillout_to_pr){
+  test$t_var_freq <- test$genotyped_variant_freq
+  ground$t_var_freq <- ground$genotyped_variant_freq
+}
 ### CHECK FOR ALL REQUIRED FLAGS
 needed_flags <- c('cf','purity','oncogenic','Variant_Classification','t_var_freq')
 res <- sapply(needed_flags,function(variable){
@@ -225,10 +230,14 @@ ground<- ground %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End
                            TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode))
 test <- test  %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_Position,':',Reference_Allele,':',Tumor_Seq_Allele2,':',Tumor_Sample_Barcode), 
                          TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode))
-
+shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
 if(res['oncogenic_tf']){
 ground <- ground %>%  mutate(oncogenic_tf =ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER'))
 test <- test  %>%  mutate(oncogenic_tf = ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER') ) 
+warning(paste0("For the purposes of this analysis, the shared variants ongogenic flag is set to the ",opt$name_ground," files' oncogenic values for accurate comparison."))
+
+test[match(shared_variants,test$var_tag),'oncogenic_tf'] <- ground[match(shared_variants, ground$var_tag),'oncogenic_tf']
+
 }
 if(res['clonality']){
 ground <- ground %>% mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity), 
@@ -244,7 +253,7 @@ test <- test %>%  mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity),
 
 warning(paste0("For the purposes of this analysis, the shared variants clonality is set to the ",opt$name_ground," files' clonality values for accurate comparison."))
 
-shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
+
 test[match(shared_variants,test$var_tag),'clonality'] <- ground[match(shared_variants, ground$var_tag),'clonality']
 
 ground$clonality <- as.character(ground$clonality)
@@ -366,17 +375,22 @@ if(opt$fillout_to_pr){
   
   ground <- ground %>% mutate(evidence = ifelse(t_alt_count >= 1, TRUE, FALSE))
   ground <- ground %>% mutate(detectable = ifelse(t_total_count >= 20, TRUE, FALSE))
+  test <- test %>% mutate(Evidence_in_Test = ifelse(t_alt_count >= 1, TRUE, FALSE))
+  test <- test %>% mutate(Detectable_in_Test = ifelse(t_total_count >= 20, TRUE, FALSE))
+  
+  ground <- ground %>% mutate(Evidence_in_Ground = ifelse(t_alt_count >= 1, TRUE, FALSE))
+  ground <- ground %>% mutate(Detectable_in_Ground = ifelse(t_total_count >= 20, TRUE, FALSE))
       
-      test <- test %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$detectable] , TRUE, FALSE))
-      ground <- ground %>% mutate(Detectable_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$detectable], TRUE, FALSE))
+      test <- test %>% mutate(Detectable_in_Ground = ifelse(var_tag %in% ground$var_tag[ground$detectable] , TRUE, FALSE))
+      ground <- ground %>% mutate(Detectable_in_Test = ifelse(var_tag %in% test$var_tag[test$detectable], TRUE, FALSE))
       
-      test <- test %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% ground$var_tag[ground$evidence], TRUE, FALSE))
-      ground <- ground %>% mutate(Evidence_in_Other_Run = ifelse(var_tag %in% test$var_tag[test$evidence], TRUE, FALSE))
+      test <- test %>% mutate(Evidence_in_Ground = ifelse(var_tag %in% ground$var_tag[ground$evidence], TRUE, FALSE))
+      ground <- ground %>% mutate(Evidence_in_Test = ifelse(var_tag %in% test$var_tag[test$evidence], TRUE, FALSE))
     
       
 } else{
-  test <- test %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% ground$var_tag , TRUE, FALSE))
-  ground <- ground %>% mutate(Called_in_Other_Run = ifelse(var_tag %in% test$var_tag , TRUE, FALSE))
+  test <- test %>% mutate(Called_in_Ground = ifelse(var_tag %in% ground$var_tag , TRUE, FALSE))
+  ground <- ground %>% mutate(Called_in_Test = ifelse(var_tag %in% test$var_tag , TRUE, FALSE))
 }  
 
     
@@ -387,7 +401,6 @@ test[i] <- lapply(test[i], as.character)
 i <- sapply(ground, is.factor)
 ground[i] <- lapply(ground[i], as.character)
 
-### Clarity NA as a character NA for analysis
 
 
 
@@ -396,11 +409,22 @@ ground[i] <- lapply(ground[i], as.character)
 
 ######### IF FILLOUTS RETURN FILLOUTS MAFS ############################
 if(opt$fillouts){
+  ground_tmp <- ground
+  test_tmp <- test
   
-  fillout_maf <- rbind(ground,test)
   
-  fillout_maf <- fillout_maf[!duplicated(fillout_maf$var_tag),]
+  colnames(ground_tmp)[grepl('^t_',colnames(ground_tmp))] <- paste0(colnames(ground_tmp)[grepl('^t_',colnames(ground_tmp))],'_called_ground')
+  colnames(test_tmp)[grepl('^t_',colnames(test_tmp))] <- paste0(colnames(test_tmp)[grepl('^t_',colnames(test_tmp))],'_called_test')
   
+  ground_tmp[,'t_ref_count'] <- ground$t_ref_count
+  ground_tmp[,'t_alt_count'] <- ground$t_alt_count
+  fillout_maf <- merge(ground_tmp,test_tmp[test_tmp$var_tag %in% shared_variants,c('var_tag', colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)])],by ='var_tag',all.x=TRUE)
+  test_tmp2 <- test_tmp[test_tmp$var_tag %nin% shared_variants,]
+  fillout_maf <- bind_rows(fillout_maf,test_tmp2)
+  fillout_maf[is.na(fillout_maf$Called_in_Ground),'Called_in_Ground'] <- TRUE
+  fillout_maf[is.na(fillout_maf$Called_in_Test),'Called_in_Test'] <- TRUE
+  
+
   fillout_maf <- as.data.frame(unnest(fillout_maf, substitutions))
   
   fillout_mapping_test <- read.table(opt$test_fillout_mapping, header = TRUE, stringsAsFactors = FALSE)
@@ -691,11 +715,11 @@ if(res['t_var_freq_bin']){
   purity_nas$Variable_ID <- as.character(purity_nas$Variable_ID)
   colr_ids <- c(purity = "#374e55FF", vaf = "#DF8F44FF",genotyped_purity="#00A1D5FF",genotyped_vaf="#B24745FF",called_purity = "#374e55FF", called_vaf = "#DF8F44FF")
   colr_ids <- colr_ids[names(colr_ids) %in% binned_vars$Variable_ID]
-  recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +  scale_color_manual(values=colr_ids) +
+  recall_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'recall',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line()  +  scale_color_manual(values=colr_ids) +
     geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.title.x = element_blank(),axis.text.x = element_blank(),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
     scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1) + labs(x=NULL,y = NULL)
   
-  precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line(stat='summary')  +   scale_color_manual(values=colr_ids) +
+  precision_bin <- ggplot(binned_vars[binned_vars$statistic_name == 'precision',] , aes(x = Frequency, y = value,group = Variable_ID, color = Variable_ID)) + geom_line()  +   scale_color_manual(values=colr_ids) +
     geom_errorbar(aes(ymin =lower, ymax = upper), width=0) + theme_classic() + theme(axis.text.x = element_text(angle = 45, hjust=1),legend.position = "none",legend.background=element_blank(),legend.title=element_blank()) +
     scale_x_discrete(labels = levels(binned_vars[,'Frequency']),drop = FALSE) + ylim(0,1)  + labs(x= NULL,y = NULL)
   
@@ -818,7 +842,6 @@ variable_parsing_and_graph_sample <- function(variable) {
             c_df <- c_df %>% filter(type == 'all')
           } 
         } 
-        write(variable,stderr())
         df1 <- rbind(df1,c_df)
       }
       
@@ -915,15 +938,27 @@ if (opt$fillouts){
   
   ground <- as.data.frame(unnest(ground, substitutions))
   test <- as.data.frame(unnest(test, substitutions))
-  write.table(ground,paste0(directory,out_prefix,'_',opt$name_ground,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
-  write.table(test,paste0(directory,out_prefix,'_',opt$name_test,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
-  
   if(opt$fillout_to_pr){
     
     out_prefix <- str_replace(out_prefix,'fillout_','')
+    colnames(ground)[grepl('^t_',colnames(ground)) & !grepl('called',colnames(ground))] <- paste0(colnames(ground)[grepl('^t_',colnames(ground))& !grepl('called',colnames(ground))],'_genotyped_ground')
+    colnames(test)[grepl('^t_',colnames(test)) & !grepl('called',colnames(test))] <-  paste0(colnames(test)[grepl('^t_',colnames(test))& !grepl('called',colnames(test))],'_genotyped_test')
     
+    ground <- merge(ground,test[,c('var_tag', colnames(test)[colnames(test) %nin% colnames(ground)])],by = 'var_tag', all = TRUE)
+    ground$evidence <- NULL
+    ground$detectable <- NULL
+    front_oreder_of_maf <- c('Hugo_Symbol','Chromosome','Start_Position','End_Position')
+    ground <- ground[.c(front_oreder_of_maf,sort(colnames(ground)[colnames(ground) %nin% front_oreder_of_maf]))]
+    write(colnames(ground),file = "temproary_check_for_colnames.txt")
+    write.table(ground,paste0(directory,out_prefix,'_genotyped_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+  
+    
+  }else{
+
+    write.table(ground,paste0(directory,out_prefix,'_',opt$name_ground,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+    write.table(test,paste0(directory,out_prefix,'_',opt$name_test,'_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
+   
   }
- 
   
 }
 if(opt$multiqc){
