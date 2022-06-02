@@ -5,7 +5,7 @@ opt = commandArgs(TRUE)
 parser=ArgumentParser()
 parser$add_argument("-b", "--bam_dir", type='character', default=NULL,
                     help="Directory containing BAMS ")
-parser$add_argument("-m",'--mappping',type='character',default=NULL,help='Tumor-Normal mapping. Expected header format: TUMOR_ID /t NORMAL_ID')
+parser$add_argument("-m",'--mapping',type='character',default=NULL,help='Tumor-Normal mapping. Expected header format: TUMOR_ID /t NORMAL_ID')
 parser$add_argument("-o",'--output_file',type="character",default = NULL)
 opt=parser$parse_args()
 
