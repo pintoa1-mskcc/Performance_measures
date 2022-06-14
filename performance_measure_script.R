@@ -923,9 +923,9 @@ if (opt$fillouts){
 
   if(is.null(opt$bed_file)){
 
-    system(paste0('bsub -J  collect_fillouts_results -e ',directory,'logs/',out_prefix,'_fillout_restructuring.err -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ))
+    system(paste0('bsub -J  collect_fillouts_results -o ',directory,'logs/',out_prefix,'_fillout_restructuring.out -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -j TRUE"' ))
   } else{
-    system(paste0('bsub -J  collect_fillouts_results -e ',directory,'logs/',out_prefix,'_fillout_restructuring.err -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -b ',opt$bed_file ,' -j TRUE"' ))
+    system(paste0('bsub -J  collect_fillouts_results -o ',directory,'logs/',out_prefix,'_fillout_restructuring.out -n 2 -R rusage[mem=5] -We 0:59 "Rscript fillouts_restruct.R -r ', ground_dir, ' -d ', directory, ' -o ',out_prefix,' -p TRUE -e ', test_dir, ' -m ', fillout_combined_mafs, ' -b ',opt$bed_file ,' -j TRUE"' ))
     
   }
   
@@ -948,8 +948,7 @@ if (opt$fillouts){
     ground$evidence <- NULL
     ground$detectable <- NULL
     front_oreder_of_maf <- c('Hugo_Symbol','Chromosome','Start_Position','End_Position')
-    ground <- ground[.c(front_oreder_of_maf,sort(colnames(ground)[colnames(ground) %nin% front_oreder_of_maf]))]
-    write(colnames(ground),file = "temproary_check_for_colnames.txt")
+    ground <- ground[,c(front_oreder_of_maf,sort(colnames(ground)[colnames(ground) %nin% front_oreder_of_maf]))]
     write.table(ground,paste0(directory,out_prefix,'_genotyped_annotated.maf'), row.names=FALSE,quote=FALSE, sep= '\t')
   
     
