@@ -227,7 +227,7 @@ statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out,opt){
     
     base_fns <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fns,fill = get(variable_id))) + col_scale + 
       scale_x_discrete(labels = unique(dataframe[variable_id]))+
-      labs(x=' ', y = 'False Negatives Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
+      labs(x=' ', y = 'False Negative Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
   } else{
     
     col_scale <- scale_fill_jama()
@@ -256,7 +256,7 @@ statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out,opt){
     
     base_fns <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fns,fill = Genotyped)) + col_scale + 
       scale_x_discrete(labels = unique(dataframe[variable_id]))+
-      labs(x=' ', y = 'False Negatives Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
+      labs(x=' ', y = 'False Negative Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
   }
   
   
