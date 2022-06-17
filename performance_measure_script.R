@@ -551,8 +551,6 @@ if(!is.null(opt$bed_file)){
   })
   
   sample_level_df <- do.call(rbind,sample_level_df)
-  cols.nums <- c(seq(2,9,1),seq(11,13,1))
-  sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
   sample_level_df <- sample_level_df[,c('tag_type','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
   
 
@@ -810,7 +808,7 @@ if(!opt$fillouts){
 
 
 variable_parsing_and_graph_sample <- function(variable) {
-  sample_level_variable <- lapply(all_samples, function(sample){
+  sample_level_variable <- function(sample){
     sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
     sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
     
@@ -819,7 +817,7 @@ variable_parsing_and_graph_sample <- function(variable) {
       sample_level_stats$Tumor_Sample_Barcode <- sample
     }
     return(sample_level_stats)
-  })
+  }
 
   sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, .parallel = T)
   sample_level_df <- sample_level_df[,c('tag_type','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
@@ -861,6 +859,7 @@ variable_parsing_and_graph_sample <- function(variable) {
 
 res['purity_bin'] <- FALSE
 sample_variables_to_parse <- c('substitutions',additional_variables,names(res[res]))
+print("sample_variables_to_parse")
 returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_sample)
 
 ############################################
