@@ -816,6 +816,7 @@ variable_parsing_and_graph_sample <- function(variable) {
     if(nrow(sample_level_stats) != 0){
       sample_level_stats$Tumor_Sample_Barcode <- sample
     }
+    print(variable,stderr())
     return(sample_level_stats)
   }
 
@@ -825,10 +826,10 @@ variable_parsing_and_graph_sample <- function(variable) {
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   
   if(variable %nin% binned_variables){
-    df1 <- sample_level_df %>% filter(tag_type == 'restrictive')
+    sample_level_df <- sample_level_df %>% filter(tag_type == 'restrictive')
     if(variable != 'type'){
-      if (any(df1$type == 'all')) {
-        df1 <- df1 %>% filter(type == 'all')
+      if (any(sample_level_df$type == 'all')) {
+        sample_level_df <- sample_level_df %>% filter(type == 'all')
       } 
      
     
@@ -836,20 +837,20 @@ variable_parsing_and_graph_sample <- function(variable) {
         c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_',variable,'_sample_performance_measures.txt'),header = TRUE)
         c_df <- c_df %>% filter(tag_type == 'restrictive')
         c_df$Genotyped <- 'Called'
-        df1$Genotyped <- 'Genotyped'
+        sample_level_df$Genotyped <- 'Genotyped'
         if(variable != 'type'){
           if (any(c_df$type == 'all')) {
             c_df <- c_df %>% filter(type == 'all')
           } 
         } 
-        df1 <- rbind(df1,c_df)
+        sample_level_df <- rbind(sample_level_df,c_df)
       }
       
       if(!opt$fillouts){
-        statistics_graphs(df1,variable,'boxplot',directory,out_prefix,opt)
+        statistics_graphs(sample_level_df,variable,'boxplot',directory,out_prefix,opt)
         
         if(opt$multiqc){
-          restruct_for_multiqc(df1,variable,'sample',opt$mq_dir)
+          restruct_for_multiqc(sample_level_df,variable,'sample',opt$mq_dir)
         }
       }
     } 
