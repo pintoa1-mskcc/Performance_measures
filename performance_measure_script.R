@@ -17,7 +17,7 @@ suppressPackageStartupMessages({library(dplyr)
   })
 
 ############################################
-doParallel::registerDoParallel(cores = detectCores())
+doParallel::registerDoParallel(cores = (detectCores()-1))
 
 ############  REQUIRED FUNCTIONS ############ 
 set.seed(123) 
@@ -361,7 +361,7 @@ if(res["purity_bin"]){
                              labels=tags)
 
     tumor_sample_purity_mapping <- ground %>% distinct(Tumor_Sample_Barcode, purity_bin,purity) 
-    warning(paste0("For the purposes of this analysis, purity is set to the ",opt$name_ground," files purity values for accurate comparison. See 003.txt for samples which have differing purities between ", opt$name_ground, " and ", opt$name_test))
+    warning(paste0("For the purposes of this analysis, purity is set to the ",opt$name_ground," files purity values for accurate comparison. for samples which have differing purities between ", opt$name_ground, " and ", opt$name_test , " refer to resulting MAFs"))
     testing_purity_maping <- test %>% distinct(Tumor_Sample_Barcode,purity_bin,purity)
     test <- left_join(test[,colnames(test) %nin% c("purity_bin",'purity')],tumor_sample_purity_mapping,by = "Tumor_Sample_Barcode")
     
@@ -859,7 +859,7 @@ variable_parsing_and_graph_sample <- function(variable) {
 
 res['purity_bin'] <- FALSE
 sample_variables_to_parse <- c('substitutions',additional_variables,names(res[res]))
-print("sample_variables_to_parse")
+print("sample_variables_to_parse",stderr())
 returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_sample)
 
 ############################################
