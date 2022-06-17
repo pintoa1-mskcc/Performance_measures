@@ -863,7 +863,7 @@ variable_parsing_and_graph_sample <- function(variable) {
   return(NULL)
 }
 
-res$purity_bin <- FALSE
+res['purity_bin'] <- FALSE
 sample_variables_to_parse <- c('substitutions',additional_variables,names(res[res]))
 returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_sample)
 
