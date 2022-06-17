@@ -17,7 +17,7 @@ suppressPackageStartupMessages({library(dplyr)
   })
 
 ############################################
-doParallel::registerDoParallel(cores = 4)
+doParallel::registerDoParallel(cores = detectCores())
 
 ############  REQUIRED FUNCTIONS ############ 
 set.seed(123) 
@@ -56,6 +56,10 @@ parser$add_argument('-u','--called_out_prefix', type = 'character', default = NU
 parser$add_argument('-m','--multiqc',action='store_true', help = 'OPTIONAL. Run multiqc after analysis. If you are running fillouts through this script, multiqc will automatically be run once genotyped analysis is complete.')
 
 opt=parser$parse_args()
+
+if(R.version$major != "4"){
+  stop("Must run script on version 4+ of R")
+}
 
 if(opt$fillout_to_pr && opt$fillouts){
   opt$fillout_to_pr <- FALSE
@@ -155,26 +159,29 @@ missing_in_ground <- unique(test$Tumor_Sample_Barcode) %nin% unique(ground$Tumor
 missing_in_test <- unique(ground$Tumor_Sample_Barcode) %nin% unique(test$Tumor_Sample_Barcode)
 
 if(any(c(missing_in_test,missing_in_ground))) {
-  warning("Sample(s) exists in one MAF but not in the other. These samples are retained in analysis but will have NA or zero values for either recall or precision. See 000.txt for more information")
-  names_m_i_g <-unique(test$Tumor_Sample_Barcode)[missing_in_ground]
-  names_m_i_t <- unique(test$Tumor_Sample_Barcode)[missing_in_test]
-  if(length(names_m_i_g) > 0 ) {
-    names(names_m_i_g) <- paste0('Missing_In_',opt$name_ground,'_Samples' )
+  warning("Sample(s) exists in one MAF but not in the other. These samples are retained in analysis but will have NA or zero values for either recall or precision. See logs/ for more information")
+  missing_in_ground <-unique(test$Tumor_Sample_Barcode)[missing_in_ground]
+  missing_in_test <- unique(test$Tumor_Sample_Barcode)[missing_in_test]
+  if(length(missing_in_ground) > 0 ) {
+    names(missing_in_ground) <- paste0('Missing_In_',opt$name_ground,'_Samples' )
     }
-  if(length(names_m_i_t) > 0 ) {
-    names(names_m_i_t) <- paste0('Missing_In_',opt$name_test,'Test_Samples')
+  if(length(missing_in_test) > 0 ) {
+    names(missing_in_test) <- paste0('Missing_In_',opt$name_test,'Test_Samples')
   }
-  warning_return_1 <- c(names_m_i_g,names_m_i_t)
-  names(warning_return_1) <- paste0('Samples missing in ', opt$name_ground,' or ',opt$name_test,' MAF')
-  write.table(warning_return_1,file=paste0(directory,'logs/000.txt'),quote = FALSE)
+  warning_return_1 <- c(missing_in_ground,missing_in_test)
+  colnames(warning_return_1) <- c(paste0('Samples missing in ', opt$name_ground),paste0('Samples missing in ', opt$name_test))
+  write.table(warning_return_1,file=paste0(directory,'logs/',out_prefix,'_missing_samples.txt'),quote = FALSE)
 }
 
 #Keep test tumor samples which are not misisngi n ground 
 all_samples <- unique(c(test$Tumor_Sample_Barcode, ground$Tumor_Sample_Barcode))
 names(all_samples) <- all_samples
 if(opt$fillout_to_pr){
-  test$t_var_freq <- test$genotyped_variant_freq
-  ground$t_var_freq <- ground$genotyped_variant_freq
+  #UTLIZE CALLED VARIANT GREQUENCY BECAUSE THAT IS MORE ACCURATE TO THE BAMS THAN GET BASE COUNTS 
+  test$t_var_freq <- test$t_var_freq_called_test
+  
+  ground$t_var_freq <- test$t_var_freq_called_ground
+  
 }
 ### CHECK FOR ALL REQUIRED FLAGS
 needed_flags <- c('cf','purity','oncogenic','Variant_Classification','t_var_freq')
@@ -197,7 +204,6 @@ if(!is.null(opt$bed)){
   test_bed <- test[,c('Chromosome','Start_Position','End_Position','bed_tag')] 
   colnames(test_bed) <- c('chr','start','end','names')
   
-  warning("The following errors are expected for versions 4.0+ of R")
   ### BEDR CURRENTLY HAS A BUG FOR R VERSION 4.0 and BEYOND. IT WILL SAVE THE OUTPUT FILE FINE, BUT IS INCAPABLE OF SAVING AS AN R OBJECT (appears to attempt to concatinate colnames for bed and test_bed, then returns only 4 columns. erroring colnames() attempt. )
   try(bedr(engine = 'bedtools', input = list(a = test_bed, b = bed), method = "intersect", params = ' -wa ', check.chr = TRUE,
                    check.zero.based = FALSE,
@@ -205,7 +211,6 @@ if(!is.null(opt$bed)){
                    check.sort = FALSE,
                    check.merge = FALSE,outputFile = paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed'),verbose = TRUE),silent = TRUE)
 
-  
   ground_bed <- ground[,c('Chromosome','Start_Position','End_Position','bed_tag')] 
   colnames(ground_bed) <- c('chr','start','end','names')
   try(bedr(engine = 'bedtools', input = list(a = ground_bed, b = bed), method = "intersect", params = ' -wa ', check.chr = TRUE,
@@ -214,10 +219,11 @@ if(!is.null(opt$bed)){
             check.sort = FALSE,
             check.merge = FALSE,outputFile = paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),verbose = TRUE),silent = TRUE)
   
-  bed_ground <- fread(paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),data.table = FALSE)
-  bed_test <-  fread(paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed'),data.table = FALSE)
+  ground_bed <- fread(paste0(directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed'),data.table = FALSE)
+  test_bed <-  fread(paste0(directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed'),data.table = FALSE)
   ground <- ground %>% mutate(on_target = ifelse(bed_tag %in% bed_ground$V4, TRUE,FALSE))
   test <- test %>% mutate(on_target = ifelse(bed_tag %in% bed_test$V4, TRUE,FALSE))
+
   system(paste0("mv ",directory,opt$out_prefix,'_',opt$name_ground,'_variant_locs.bed ', directory,'results/'))
   system(paste0("mv ",directory,opt$out_prefix,'_',opt$name_test,'_variant_locs.bed ', directory,'results/'))
   
@@ -232,56 +238,58 @@ test <- test  %>% mutate(var_tag = str_c(Chromosome,':',Start_Position,':',End_P
                          TAG = str_c(Chromosome,':',Start_Position,':',Tumor_Sample_Barcode))
 shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
 if(res['oncogenic_tf']){
-ground <- ground %>%  mutate(oncogenic_tf =ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER'))
-test <- test  %>%  mutate(oncogenic_tf = ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER') ) 
-warning(paste0("For the purposes of this analysis, the shared variants ongogenic flag is set to the ",opt$name_ground," files' oncogenic values for accurate comparison."))
-
-test[match(shared_variants,test$var_tag),'oncogenic_tf'] <- ground[match(shared_variants, ground$var_tag),'oncogenic_tf']
+  ground <- ground %>%  mutate(oncogenic_tf =ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER'))
+  test <- test  %>%  mutate(oncogenic_tf = ifelse(grepl("ncogenic", oncogenic),'ONCOGENIC' ,'OTHER') ) 
+  warning(paste0("For the purposes of this analysis, the shared variants ongogenic flag is set to the ",opt$name_ground," files' oncogenic values for accurate comparison."))
+  
+  test[match(shared_variants,test$var_tag),'oncogenic_tf'] <- ground[match(shared_variants, ground$var_tag),'oncogenic_tf']
 
 }
 if(res['clonality']){
-ground <- ground %>% mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity), 
-                            'INDETERMINATE',
-                                             ifelse((ccf_expected_copies > 0.8 | (ccf_expected_copies > 0.7 & ccf_expected_copies_upper > 0.9)), 
-                                                                                                                        'CLONAL', 
-                                                                                                                        'SUBCLONAL')))
-test <- test %>%  mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity), 
-                                        'INDETERMINATE',
-                                        ifelse((ccf_expected_copies > 0.8 | (ccf_expected_copies > 0.7 & ccf_expected_copies_upper > 0.9)), 
-                                               'CLONAL', 
-                                               'SUBCLONAL')))
-
-warning(paste0("For the purposes of this analysis, the shared variants clonality is set to the ",opt$name_ground," files' clonality values for accurate comparison."))
-
-
-test[match(shared_variants,test$var_tag),'clonality'] <- ground[match(shared_variants, ground$var_tag),'clonality']
-
-ground$clonality <- as.character(ground$clonality)
-
-test$clonality <- as.character(test$clonality)
-test[is.na(test$clonality),'clonality'] <- 'N/A'
-ground[is.na(ground$clonality),'clonality'] <- 'N/A'
+  ground <- ground %>% mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity), 
+                              'INDETERMINATE',
+                                               ifelse((ccf_expected_copies > 0.8 | (ccf_expected_copies > 0.7 & ccf_expected_copies_upper > 0.9)), 
+                                                                                                                          'CLONAL', 
+                                                                                                                          'SUBCLONAL')))
+  test <- test %>%  mutate(clonality =  ifelse(is.na(cf) | cf < (0.6 * purity), 
+                                          'INDETERMINATE',
+                                          ifelse((ccf_expected_copies > 0.8 | (ccf_expected_copies > 0.7 & ccf_expected_copies_upper > 0.9)), 
+                                                 'CLONAL', 
+                                                 'SUBCLONAL')))
+  
+  warning(paste0("For the purposes of this analysis, the shared variants clonality is set to the ",opt$name_ground," files' clonality values for accurate comparison."))
+  
+  
+  test[match(shared_variants,test$var_tag),'clonality'] <- ground[match(shared_variants, ground$var_tag),'clonality']
+  
+  ground$clonality <- as.character(ground$clonality)
+  
+  test$clonality <- as.character(test$clonality)
+  test[is.na(test$clonality),'clonality'] <- 'N/A'
+  ground[is.na(ground$clonality),'clonality'] <- 'N/A'
 }
 
 if(res["is_non_syn_mut"]){
-ground <- ground %>% mutate(is_non_syn_mut = ifelse(Variant_Classification %in% c("Missense_Mutation", 
-                                                               "Nonsense_Mutation", 
-                                                               "Nonstop_Mutation", 
-                                                               "Frame_Shift_Ins", 
-                                                               "Frame_Shift_Del",
-                                                               "In_Frame_Del",
-                                                               "In_Frame_Ins",
-                                                               "Translation_Start_Site",
-                                                               "Splice_Site"), T, F)) 
-test <- test %>% mutate(is_non_syn_mut = ifelse(Variant_Classification %in% c("Missense_Mutation", 
-                                                                             "Nonsense_Mutation", 
-                                                                             "Nonstop_Mutation", 
-                                                                             "Frame_Shift_Ins", 
-                                                                             "Frame_Shift_Del",
-                                                                             "In_Frame_Del",
-                                                                             "In_Frame_Ins",
-                                                                             "Translation_Start_Site",
-                                                                             "Splice_Site"), T, F)) 
+  ground <- ground %>% mutate(is_non_syn_mut = ifelse(Variant_Classification %in% c("Missense_Mutation", 
+                                                                 "Nonsense_Mutation", 
+                                                                 "Nonstop_Mutation", 
+                                                                 "Frame_Shift_Ins", 
+                                                                 "Frame_Shift_Del",
+                                                                 "In_Frame_Del",
+                                                                 "In_Frame_Ins",
+                                                                 "Translation_Start_Site",
+                                                                 "Splice_Site"), T, F)) 
+  test <- test %>% mutate(is_non_syn_mut = ifelse(Variant_Classification %in% c("Missense_Mutation", 
+                                                                               "Nonsense_Mutation", 
+                                                                               "Nonstop_Mutation", 
+                                                                               "Frame_Shift_Ins", 
+                                                                               "Frame_Shift_Del",
+                                                                               "In_Frame_Del",
+                                                                               "In_Frame_Ins",
+                                                                               "Translation_Start_Site",
+                                                                               "Splice_Site"), T, F)) 
+  test[match(shared_variants,test$var_tag),'is_non_syn_mut'] <- ground[match(shared_variants, ground$var_tag),'is_non_syn_mut']
+  
 }
 ### We will calcaulate clonality for test var tags in case they are false positives, but true positives must match between ground and test var tags
 
@@ -316,26 +324,24 @@ tags <- c("[0-5)","[5-10)", "[10-15)", "[15-20)", "[20-25)", "[25-30)","[30-35)"
 tags <- factor(tags,levels=tags)
 
 if(res['t_var_freq_bin']){
-ground$t_var_freq_bin <- cut(ground$t_var_freq, 
+  ground$t_var_freq_bin <- cut(ground$t_var_freq, 
+                               breaks=breaks, 
+                               include.lowest=TRUE, 
+                               right=FALSE, 
+                               labels=tags)
+  
+  
+  
+  test$t_var_freq_bin <- cut(test$t_var_freq, 
                              breaks=breaks, 
                              include.lowest=TRUE, 
                              right=FALSE, 
                              labels=tags)
+  
 
+  warning(paste0("For the purposes of this analysis, t_var_freq_bin is set to the ",opt$name_ground," files variant frequency bin values for accurate comparison."))
 
-
-test$t_var_freq_bin <- cut(test$t_var_freq, 
-                           breaks=breaks, 
-                           include.lowest=TRUE, 
-                           right=FALSE, 
-                           labels=tags)
-
-
-# idnetify shared variants which have differing 't_var_freq_bin'
-# For purposes of recall, assume that ground t_var_freq_bins are the 'correct' variables so set those test values to that
-warning(paste0("For the purposes of this analysis, t_var_freq_bin is set to the ",opt$name_ground," files variant frequency bin values for accurate comparison."))
-
-test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(shared_variants, ground$var_tag),'t_var_freq_bin']
+  test[match(shared_variants,test$var_tag),'t_var_freq_bin'] <- ground[match(shared_variants, ground$var_tag),'t_var_freq_bin']
 }
 
 
@@ -357,8 +363,6 @@ if(res["purity_bin"]){
     tumor_sample_purity_mapping <- ground %>% distinct(Tumor_Sample_Barcode, purity_bin,purity) 
     warning(paste0("For the purposes of this analysis, purity is set to the ",opt$name_ground," files purity values for accurate comparison. See 003.txt for samples which have differing purities between ", opt$name_ground, " and ", opt$name_test))
     testing_purity_maping <- test %>% distinct(Tumor_Sample_Barcode,purity_bin,purity)
-    combined <- merge(tumor_sample_purity_mapping,testing_purity_maping,by="Tumor_Sample_Barcode",suffixes = c(opt$name_ground,opt$name_test))
-    write.table(combined[which(combined[,paste0('purity_bin',opt$name_ground)] != combined[,paste0('purity_bin',opt$name_ground)] ),],file=paste0(directory,'logs/003.txt'),quote = FALSE) 
     test <- left_join(test[,colnames(test) %nin% c("purity_bin",'purity')],tumor_sample_purity_mapping,by = "Tumor_Sample_Barcode")
     
     test$purity_bin <- as.character(test$purity_bin)
@@ -368,7 +372,6 @@ if(res["purity_bin"]){
     ground[is.na(ground$purity_bin),'purity_bin'] <- 'N/A'
     }
 
-#### THIS SCRIPT UTILIZES n_variant_frequency AS AN INDICATOR THAT FILLOUTS HAS BEEN RUN, If fillouts has been run, performance measures are only run on detectable reads
 if(opt$fillout_to_pr){
   test <- test %>% mutate(evidence = ifelse(t_alt_count >= 1, TRUE, FALSE))
   test <- test %>% mutate(detectable = ifelse(t_total_count >= 20, TRUE, FALSE))
@@ -419,8 +422,10 @@ if(opt$fillouts){
   ground_tmp[,'t_ref_count'] <- ground$t_ref_count
   ground_tmp[,'t_alt_count'] <- ground$t_alt_count
   fillout_maf <- merge(ground_tmp,test_tmp[test_tmp$var_tag %in% shared_variants,c('var_tag', colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)])],by ='var_tag',all.x=TRUE)
-  test_tmp2 <- test_tmp[test_tmp$var_tag %nin% shared_variants,]
-  fillout_maf <- bind_rows(fillout_maf,test_tmp2)
+  test_tmp <- test_tmp[test_tmp$var_tag %nin% shared_variants,]
+  fillout_maf <- bind_rows(fillout_maf,test_tmp)
+
+
   fillout_maf[is.na(fillout_maf$Called_in_Ground),'Called_in_Ground'] <- TRUE
   fillout_maf[is.na(fillout_maf$Called_in_Test),'Called_in_Test'] <- TRUE
   
@@ -436,12 +441,12 @@ if(opt$fillouts){
   
   all_provided_bams_tumor_ids <- unique(c(fillout_mapping_test$tumor_id,fillout_mapping_ground$tumor_id))
   if(any(all_provided_bams_tumor_ids %nin% fillout_maf$Tumor_Sample_Barcode)){
-    warning('A provided Tumor BAM for fillouts does not exist within the provided MAFs. This sample will not have fillouts run as it has no mutations. See 001.txt for the sample id')
+    warning('Tumor BAM(s) for fillouts does not exist within the provided MAFs. This sample will not have fillouts run as it has no mutations. See logs/ for the sample id')
     removed_bam_sample <- all_provided_bams_tumor_ids[all_provided_bams_tumor_ids %nin% fillout_maf$Tumor_Sample_Barcode]
-    write.table(removed_bam_sample,file=paste0(directory,'logs/001.txt'),quote = FALSE) 
+    write.table(removed_bam_sample,file=paste0(directory,'logs/',out_prefix,'_sample_missing_variants_in_mafs.txt'),quote = FALSE) 
   }
   if (any( fillout_maf$Tumor_Sample_Barcode %nin% fillout_mapping_test$tumor_id) | any(fillout_maf$Tumor_Sample_Barcode %nin% fillout_mapping_ground$tumor_id)) {
-    stop('A sample within the P/R cohort is missing from the provided fillout mapping file. Please rerun this script again with the correct bam mapping. ')
+    stop('Sample(s) within the provided MAFs are missing from the provided mapping file(s). Please rerun this script with the correct bam mapping. ')
   }
   
   dir.create(fillout_output_dir)
@@ -506,30 +511,31 @@ binned_variables <- variables_to_parse[grepl('bin',variables_to_parse)]
 
 if(!is.null(opt$bed_file)){
   df <- parse_dataframe_on_var(ground,test,'on_target','cohort')
-  df <- df[,c('permission','type','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
+  df$Tumor_Sample_Barcode <- 'Cohort'
+  df <- df[,c('tag_type','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
   
   write.table(df,paste0(directory,'results/',out_prefix,'_','on_target','_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
-  df1 <- df %>% filter(permission == 'restrictive')
+  df <- df %>% filter(tag_type == 'restrictive')
 
   
   if(opt$fillout_to_pr){
     c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_','on_target','_cohort_performance_measures.txt'),header = TRUE)
-    c_df <- c_df[c_df$permission=='restrictive',]
+    c_df <- c_df[c_df$tag_type=='restrictive',]
     
     c_df$Genotyped <- 'Called'
-    df1$Genotyped <- 'Genotyped'
+    df$Genotyped <- 'Genotyped'
     
-    df1 <- rbind(df1,c_df)
+    df <- rbind(df,c_df)
     
   }  
-  if (any(df1$type == 'all')) {
-    df1 <- df1 %>% filter(type == 'all')
+  if (any(df$type == 'all')) {
+    df <- df %>% filter(type == 'all')
   } 
   if(!opt$fillouts){
-    statistics_graphs(df1,'on_target','bar',directory,out_prefix,opt)
+    statistics_graphs(df,'on_target','bar',directory,out_prefix,opt)
   
    if(opt$multiqc){
-      restruct_for_multiqc(df1,'on_target','cohort',opt$mq_dir)
+      restruct_for_multiqc(df,'on_target','cohort',opt$mq_dir)
     }
   
   } 
@@ -547,30 +553,30 @@ if(!is.null(opt$bed_file)){
   sample_level_df <- do.call(rbind,sample_level_df)
   cols.nums <- c(seq(2,9,1),seq(11,13,1))
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
-  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
+  sample_level_df <- sample_level_df[,c('tag_type','type','Tumor_Sample_Barcode','on_target','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
   
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_','on_target','_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
-  df1 <- sample_level_df %>% filter(permission == 'restrictive')
+  df <- sample_level_df %>% filter(tag_type == 'restrictive')
 
   if(opt$fillout_to_pr){
     c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_','on_target','_sample_performance_measures.txt'),header = TRUE)
-    c_df <- c_df[c_df$permission=='restrictive',]
+    c_df <- c_df[c_df$tag_type=='restrictive',]
     
     c_df$Genotyped <- 'Called'
-    df1$Genotyped <- 'Genotyped'
+    df$Genotyped <- 'Genotyped'
     
-    df1 <- rbind(df1,c_df)
+    df <- rbind(df,c_df)
     
     
   }  
-  if (any(df1$type == 'all')) {
-    df1 <- df1 %>% filter(type == 'all')
+  if (any(df$type == 'all')) {
+    df <- df %>% filter(type == 'all')
   } 
   if(!opt$fillouts){
-    statistics_graphs(df1,'on_target','boxplot',directory,out_prefix,opt)
+    statistics_graphs(df,'on_target','boxplot',directory,out_prefix,opt)
     if(opt$multiqc){
-      restruct_for_multiqc(df1,'on_target','sample',opt$mq_dir)
+      restruct_for_multiqc(df,'on_target','sample',opt$mq_dir)
     }
   } 
 
@@ -582,14 +588,15 @@ if(!is.null(opt$bed_file)){
 }
 
 overview_df <- calc_stats_by_variant_type(ground,test,'cohort')
-overview_df <- overview_df[,c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
+overview_df$Tumor_Sample_Barcode <- 'Cohort'
+overview_df <- overview_df[,c('tag_type','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 write.table(overview_df,paste0(directory,'results/',out_prefix,'_overview_all_variants_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
-overview_df <- overview_df[overview_df$permission == 'restrictive',]
+overview_df <- overview_df[overview_df$tag_type == 'restrictive',]
 
 
 if(opt$fillout_to_pr){
   c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_overview_all_variants_performance_measures.txt'),header = TRUE)
-  c_df <- c_df[c_df$permission=='restrictive',]
+  c_df <- c_df[c_df$tag_type=='restrictive',]
   
   c_df$Genotyped <- 'Called'
   overview_df$Genotyped <- 'Genotyped'
@@ -606,40 +613,40 @@ if(!opt$fillouts){
   }
 }
 
-
 variable_parsing_and_graph <- function(variable) {
   df <- parse_dataframe_on_var(ground,test,variable,'cohort')
-  df <- df[,c('permission','type',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
+  df$Tumor_Sample_Barcode <- 'Cohort'
+  df <- df[,c('tag_type','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
   
   write.table(df,paste0(directory,'results/',out_prefix,'_',variable,'_cohort_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   
   
   
   if(variable %nin% binned_variables){
-    df1 <- df %>% filter(permission == 'restrictive')
+    df <- df %>% filter(tag_type == 'restrictive')
     if(variable != 'type'){
-      if (any(df1$type == 'all')) {
-        df1 <- df1 %>% filter(type == 'all')
+      if (any(df$type == 'all')) {
+        df <- df %>% filter(type == 'all')
       } 
     } 
     if(opt$fillout_to_pr){
       c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_',variable,'_cohort_performance_measures.txt'),header = TRUE)
-      c_df <- c_df %>% filter(permission == 'restrictive')
+      c_df <- c_df %>% filter(tag_type == 'restrictive')
       if(variable != 'type'){
         if (any(c_df$type == 'all')) {
           c_df <- c_df %>% filter(type == 'all')
         } 
       } 
       c_df$Genotyped <- 'Called'
-      df1$Genotyped <- 'Genotyped'
-      df1 <- rbind(df1,c_df)
+      df$Genotyped <- 'Genotyped'
+      df <- rbind(df,c_df)
     }
     if(!opt$fillouts){ 
-      statistics_graphs(df1,variable,'bar',directory,out_prefix,opt)
+      statistics_graphs(df,variable,'bar',directory,out_prefix,opt)
   
   
       if(opt$multiqc){
-        restruct_for_multiqc(df1,variable,'cohort',opt$mq_dir)
+        restruct_for_multiqc(df,variable,'cohort',opt$mq_dir)
       }
     
     }
@@ -657,7 +664,7 @@ binned_vars <- plyr::adply(variables_to_parse, 1, variable_parsing_and_graph, .p
 
 ######## SPECIAL BINNED PLOTS ########
 if(res['t_var_freq_bin']){
-  binned_vars <- binned_vars %>% filter(type == 'all') %>% filter(permission == 'restrictive')
+  binned_vars <- binned_vars %>% filter(type == 'all') %>% filter(tag_type == 'restrictive')
   purity_nas <- binned_vars[grepl('^N',binned_vars$purity_bin) & !is.na(binned_vars$purity_bin),]
   purity_nas$Variable_ID <- 'purity'
   
@@ -690,12 +697,12 @@ if(res['t_var_freq_bin']){
     binned_vars_v$Frequency <- binned_vars_v$t_var_freq_bin
     binned_vars_p$Frequency <- binned_vars_p$purity_bin
     binned_vars_v$Variable_ID <- 'called_vaf'
-    shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','Frequency')
+    shared_cols <- c('tag_type','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','Frequency')
     c_binned_vars <- rbind(binned_vars_p[,shared_cols],binned_vars_v[,shared_cols])
     
   
     c_binned_vars <- c_binned_vars %>%   mutate(Frequency = factor(Frequency,levels=tags)) %>% 
-      filter(!is.na(Frequency)) %>% filter(type == 'all') %>% filter(permission == 'restrictive')
+      filter(!is.na(Frequency)) %>% filter(type == 'all') %>% filter(tag_type == 'restrictive')
     binned_vars <- binned_vars %>% mutate(Variable_ID =  factor(ifelse(!is.na(t_var_freq_bin),'genotyped_vaf',ifelse(!is.na(purity_bin),'genotyped_purity',NA)) ))
     c_binned_vars$Genotyped <- 'Called'
     binned_vars$Genotyped <- 'Genotyped'
@@ -704,9 +711,9 @@ if(res['t_var_freq_bin']){
    purity_nas$Variable_ID <- 'genotyped_purity'
    purity_nas$Genotyped <- "Genotyped"
    binned_vars_p$Genotyped <- 'Called'
-   shared_cols <- c('permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','purity_bin')
+   shared_cols <- c('tag_type','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','Variable_ID','purity_bin')
    
-   c_purity_nas <- binned_vars_p[grepl('N/A',binned_vars_p$purity_bin),] %>% filter(type == 'all') %>% filter(permission == 'restrictive')
+   c_purity_nas <- binned_vars_p[grepl('N/A',binned_vars_p$purity_bin),] %>% filter(type == 'all') %>% filter(tag_type == 'restrictive')
    purity_nas <- rbind(c_purity_nas[,c('Genotyped',shared_cols)],purity_nas[,c('Genotyped',shared_cols)])
   
   }
@@ -748,7 +755,7 @@ if(res['t_var_freq_bin']){
     colnames(purity_nas)[colnames(purity_nas) == 'purity_bin']  <- 'Purity'
     colnames(binned_vars_pur)[colnames(binned_vars_pur) == 'Frequency'] <- 'Purity'
   
-    shared_cols <- c('Variable_ID','Purity','permission','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')
+    shared_cols <- c('Variable_ID','Purity','tag_type','type','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')
     if(opt$fillout_to_pr){
       shared_cols <- c(shared_cols, 'Genotyped')
     }
@@ -771,42 +778,41 @@ if(res['t_var_freq_bin']){
 
 # ########## SAMPLE LEVEL PLOTS #############
 
-sample_level_raw <- lapply(all_samples, function(sample){
+sample_level_overviews <- function(sample){
   sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
   sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
   
   sample_level_stats <- calc_stats_by_variant_type(sample_ground,sample_test,'sample')
   sample_level_stats$Tumor_Sample_Barcode <- sample
   return(sample_level_stats)
-})
-
-sample_level_raw <- do.call(rbind,sample_level_raw)
+}
+sample_level_raw <- plyr::adply(all_samples, 1, sample_level_overviews, .parallel = T)
 cols.nums <- c(seq(2,9,1),seq(11,13,1))
 sample_level_raw[cols.nums] <- lapply(sample_level_raw[cols.nums], as.numeric)
-sample_level_raw <- sample_level_raw[,c('permission','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
+sample_level_raw <- sample_level_raw[,c('tag_type','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
 write.table(sample_level_raw,paste0(directory,'results/',out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
-sample_level_raw <- sample_level_raw[sample_level_raw$permission == 'restrictive',]
-df1 <- sample_level_raw
+sample_level_raw <- sample_level_raw[sample_level_raw$tag_type == 'restrictive',]
+df <- sample_level_raw
 if(!is.null(opt$called_directory)){
   c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_sample_overview_performance_measures.txt'),header = TRUE)
-  c_df <- c_df[c_df$permission == 'restrictive',]
+  c_df <- c_df[c_df$tag_type == 'restrictive',]
   c_df$Genotyped <- 'Called'
-  df1$Genotyped <- 'Genotyped'
+  df$Genotyped <- 'Genotyped'
 
-  df1 <- rbind(df1,c_df)
+  df <- rbind(df,c_df)
 }
 if(!opt$fillouts){
-  statistics_graphs(df1,'type','boxplot',directory,out_prefix,opt)
+  statistics_graphs(df,'type','boxplot',directory,out_prefix,opt)
   
   if(opt$multiqc){
-    restruct_for_multiqc(df1,'type','sample',opt$mq_dir)
+    restruct_for_multiqc(df,'type','sample',opt$mq_dir)
   }
 }
 
 
 variable_parsing_and_graph_sample <- function(variable) {
-  sample_level_df <- lapply(all_samples, function(sample){
+  sample_level_variable <- lapply(all_samples, function(sample){
     sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
     sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
     
@@ -817,15 +823,15 @@ variable_parsing_and_graph_sample <- function(variable) {
     return(sample_level_stats)
   })
 
-  sample_level_df <- do.call(rbind,sample_level_df)
+  sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, .parallel = T)
   cols.nums <- c(seq(2,9,1),seq(11,13,1))
   sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
-  sample_level_df <- sample_level_df[,c('permission','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
+  sample_level_df <- sample_level_df[,c('tag_type','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   
   if(variable %nin% binned_variables){
-    df1 <- sample_level_df %>% filter(permission == 'restrictive')
+    df1 <- sample_level_df %>% filter(tag_type == 'restrictive')
     if(variable != 'type'){
       if (any(df1$type == 'all')) {
         df1 <- df1 %>% filter(type == 'all')
@@ -834,7 +840,7 @@ variable_parsing_and_graph_sample <- function(variable) {
     
       if(!is.null(opt$called_directory)){
         c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_',variable,'_sample_performance_measures.txt'),header = TRUE)
-        c_df <- c_df %>% filter(permission == 'restrictive')
+        c_df <- c_df %>% filter(tag_type == 'restrictive')
         c_df$Genotyped <- 'Called'
         df1$Genotyped <- 'Genotyped'
         if(variable != 'type'){
@@ -857,28 +863,26 @@ variable_parsing_and_graph_sample <- function(variable) {
   return(NULL)
 }
 
-
-sample_variables_to_parse <- c('oncogenic_tf','clonality','substitutions','is_non_syn_mut','t_var_freq_bin', additional_variables)
-res["purity_bin"] <- FALSE
+res$purity_bin <- FALSE
 sample_variables_to_parse <- c('substitutions',additional_variables,names(res[res]))
-returning_null <- plyr::adply(sample_variables_to_parse, 1, variable_parsing_and_graph_sample, .parallel = T)
+returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_sample)
 
 ############################################
 
 ##### PR CURVE
-if(res['purity_bin']){
+if(any(names(res) == 'purity_bin')){
   pr_curve_df <- left_join(sample_level_raw[sample_level_raw$type == 'all',],ground %>% select(c(Tumor_Sample_Barcode, purity)) %>% distinct(), by = "Tumor_Sample_Barcode")
   
-  pr_curve_df <- pr_curve_df %>% filter(statistic_name %in% c('recall','precision')) %>% filter(permission == 'restrictive') %>%
+  pr_curve_df <- pr_curve_df %>% filter(statistic_name %in% c('recall','precision')) %>% filter(tag_type == 'restrictive') %>%
     select(c(statistic_name,value,Tumor_Sample_Barcode,purity)) %>% distinct(statistic_name,value,Tumor_Sample_Barcode,purity) %>%
     pivot_wider(id_cols= c(Tumor_Sample_Barcode, purity),names_from = statistic_name, values_from =  value) 
     
   if(!opt$fillouts){
     if(opt$multiqc){
       png(paste0(opt$mq_dir,'precision_recall_plot_mqc.png'),width=600)
-      ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
+      print(ggplot(pr_curve_df,aes(x = recall, y = precision, color = purity)) + geom_point()  + scale_color_gradient() +
         theme_classic() + theme(axis.text.x = element_text(angle = 45,hjust=1),legend.position = "right",legend.background=element_blank()) +
-        ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1)
+        ggtitle('Precision Recall Per Sample') + ylim(0,1) + xlim(0,1))
       dev.off()
       
     }
