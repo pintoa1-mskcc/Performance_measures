@@ -787,8 +787,6 @@ sample_level_overviews <- function(sample){
   return(sample_level_stats)
 }
 sample_level_raw <- plyr::adply(all_samples, 1, sample_level_overviews, .parallel = T)
-cols.nums <- c(seq(2,9,1),seq(11,13,1))
-sample_level_raw[cols.nums] <- lapply(sample_level_raw[cols.nums], as.numeric)
 sample_level_raw <- sample_level_raw[,c('tag_type','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
 write.table(sample_level_raw,paste0(directory,'results/',out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
@@ -824,8 +822,6 @@ variable_parsing_and_graph_sample <- function(variable) {
   })
 
   sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, .parallel = T)
-  cols.nums <- c(seq(2,9,1),seq(11,13,1))
-  sample_level_df[cols.nums] <- lapply(sample_level_df[cols.nums], as.numeric)
   sample_level_df <- sample_level_df[,c('tag_type','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
