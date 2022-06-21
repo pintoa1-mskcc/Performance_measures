@@ -32,7 +32,7 @@ parse_dataframe_on_var <- function(ground_df,test_df,variable_id,type_of_analysi
         output <-f1_stats(targeted_ground,targeted_test,type_of_analysis)
         output[variable_id] <- id
         output['type'] <- 'SNV'
-        output <- output %>% filter(permission == 'restrictive')
+        output <- output %>% filter(tag_type == 'restrictive')
       
     } else {
       output <- calc_stats_by_variant_type(targeted_ground,targeted_test,type_of_analysis) 
@@ -87,15 +87,20 @@ calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
 
 f1_stats <- function(ground_set,test_set,type_of_analysis){
   n_samples <- length(unique(c(ground_set$Tumor_Sample_Barcode,test_set$Tumor_Sample_Barcode)))
-  stats <- do.call(rbind,lapply(c('restrictive','permissive'), function(permission){
+  if(any(c(colnames(ground_set),colnames(test_set)) == 'detectable')){
+    run_types <- c('restrictive')
+    
+  } else {
+    run_types <- c('restrictive','permissive')
+    
+  }
+  stats <- do.call(rbind,lapply(run_types, function(tag_type){
     
     
     # If fillouts has been run, (detectable present), ensure opposing set is detectable at that location 
     if(any(c(colnames(ground_set),colnames(test_set)) == 'detectable')){
       test_set_must <- test_set[!test_set$evidence & test_set$detectable,]
       ground_set_must <- ground_set[!ground_set$evidence & ground_set$detectable,]
-      
-      if(permission == 'restrictive'){
         tps <- length(ground_set$var_tag[ground_set$evidence & ground_set$var_tag %in% test_set$var_tag[test_set$evidence]])
         
         ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
@@ -109,26 +114,11 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
         
         fps <- length(fps[which(fps %in% ground_set_must$var_tag)])
         vars_with_no_evidence_in_either_test_or_ground <- length(ground_set$var_tag[!ground_set$evidence & ground_set$var_tag %in%  test_set$var_tag[!test_set$evidence]])
-      } else {
-        tps <- length(unique(ground_set$TAG[ground_set$evidence & ground_set$TAG %in% test_set$TAG[test_set$evidence]]))
-        
-        ## Remove variants from count if test_set$var_tag is NOT detectable (these variants cannot be used in analysis as FNs)
-        fns <- ground_set$TAG[ground_set$evidence & ground_set$TAG  %nin% test_set$TAG[test_set$evidence]]
-        test_set_no_ev_not_detect <- length(unique(fns[which(fns %nin% test_set_must$TAG)]))
-        fns <- length(unique(fns[which(fns %in% test_set_must$TAG)]))
-        
-        ## Remove variants from count if ground_set$var_tag is NOT detectable (these variants cannot be used in analysis as FPs)
-        fps <- test_set$TAG[test_set$evidence & test_set$TAG  %nin% ground_set$TAG[ground_set$evidence]]
-        ground_set_no_ev_not_detect <- length(unique(fps[which(fps %nin% ground_set_must$TAG)]))
-        fps <- length(unique(fps[which(fps %in% ground_set_must$TAG)]))
-        vars_with_no_evidence_in_either_test_or_ground <- length(unique(ground_set$TAG[!ground_set$evidence & ground_set$TAG %in%  test_set$TAG[!test_set$evidence]]))
-        
-      }
 
       total_var_count <- tps + fps + fns + ground_set_no_ev_not_detect + test_set_no_ev_not_detect + vars_with_no_evidence_in_either_test_or_ground
       
     } else{
-      if(permission == 'restrictive'){
+      if(tag_type == 'restrictive'){
         test_set_tags <- test_set$var_tag
         ground_set_tags <- ground_set$var_tag
       } else {
@@ -153,29 +143,18 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
     bin_conf_recall <- binom.confint(tps,(tps + fns), conf.level = 0.95, method = 'wilson')
     bin_conf_precision <- binom.confint(tps,(tps + fps), conf.level = 0.95, method = 'wilson')
     # If cohort level bootstrap, if not return NA
-    if (grepl('cohort',type_of_analysis)){
-      mySample =c(rep("TP", tps), rep("FN", fns), rep("FP", fps))
-      getHarm = function(){
-        g = sample(mySample, replace=TRUE)
-        Recall <- sum(g=="TP")/(sum("TP"==g) + sum("FN" == g))
-        Precision <- sum(g=="TP")/(sum("TP"==g) + sum("FP" == g))
-        (2 * (Recall * Precision)) / (Precision + Recall)
-      }
+
       
-      mf_harmonic_F1 = replicate(n = 1000, getHarm())
+    f1_confidence <- c((2 * bin_conf_recall$lower * bin_conf_precision$lower)/(bin_conf_precision$lower + bin_conf_recall$lower),(2 * bin_conf_recall$upper * bin_conf_precision$upper)/(bin_conf_precision$upper + bin_conf_recall$upper))
       
-      f1_confidence <- quantile(mf_harmonic_F1,c(0.025,0.975),na.rm = TRUE)
-      
-    } else {
-      f1_confidence <- rep(NA,2)
-    } 
-    repo <- c(permission,total_var_count,n_samples,tps,fps,fns,ground_set_no_ev_not_detect,test_set_no_ev_not_detect,vars_with_no_evidence_in_either_test_or_ground)
+    
+    repo <- c(tag_type,total_var_count,n_samples,tps,fps,fns,ground_set_no_ev_not_detect,test_set_no_ev_not_detect,vars_with_no_evidence_in_either_test_or_ground)
     stats_p <- c(repo,'precision',precision,bin_conf_precision$lower,bin_conf_precision$upper)
     stats_r <- c(repo,'recall', recall,bin_conf_recall$lower,bin_conf_recall$upper)
     stats_f <- c(repo,'f1_Score',f1,f1_confidence[1],f1_confidence[2])
     
     stats <- as.data.frame(rbind(stats_r,stats_p,stats_f))
-    colnames(stats) <- c('permission','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','statistic_name','value','lower','upper')
+    colnames(stats) <- c('tag_type','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground','statistic_name','value','lower','upper')
     col.nums <- c(seq(2,9,1),seq(11,13,1))
     
     stats[col.nums] <- lapply(stats[col.nums], as.numeric)
@@ -227,7 +206,7 @@ statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out,opt){
     
     base_fns <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fns,fill = get(variable_id))) + col_scale + 
       scale_x_discrete(labels = unique(dataframe[variable_id]))+
-      labs(x=' ', y = 'False Negatives Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
+      labs(x=' ', y = 'False Negative Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
   } else{
     
     col_scale <- scale_fill_jama()
@@ -256,7 +235,7 @@ statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out,opt){
     
     base_fns <- ggplot(dataframe[dataframe$statistic_name == stat_name,],aes(x=get(variable_id),y=fns,fill = Genotyped)) + col_scale + 
       scale_x_discrete(labels = unique(dataframe[variable_id]))+
-      labs(x=' ', y = 'False Negatives Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
+      labs(x=' ', y = 'False Negative Count') + general_theme + ylim(0,max(dataframe[dataframe$statistic_name == stat_name,'fns'])+1)
   }
   
   
