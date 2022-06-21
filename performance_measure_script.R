@@ -22,7 +22,6 @@ doParallel::registerDoParallel(cores = cores)
 
 ############  REQUIRED FUNCTIONS ############ 
 set.seed(123) 
-#oncokb <- fromJSON(readLines('http://oncokb.org/api/v1/genes', warn=F))
 source("performance_measure_custom_functions.R")
 
 ############################################
@@ -623,18 +622,14 @@ variable_parsing_and_graph <- function(variable) {
   
   if(variable %nin% binned_variables){
     df <- df %>% filter(tag_type == 'restrictive')
-    if(variable != 'type'){
-      if (any(df$type == 'all')) {
-        df <- df %>% filter(type == 'all')
-      } 
+    if(variable != 'type' && any(df$type == 'all')){
+      df <- df %>% filter(type == 'all')
     } 
     if(opt$fillout_to_pr){
       c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_',variable,'_cohort_performance_measures.txt'),header = TRUE)
       c_df <- c_df %>% filter(tag_type == 'restrictive')
-      if(variable != 'type'){
-        if (any(c_df$type == 'all')) {
+      if(variable != 'type' && any(c_df$type == 'all') ){
           c_df <- c_df %>% filter(type == 'all')
-        } 
       } 
       c_df$Genotyped <- 'Called'
       df$Genotyped <- 'Genotyped'
@@ -642,8 +637,6 @@ variable_parsing_and_graph <- function(variable) {
     }
     if(!opt$fillouts){ 
       statistics_graphs(df,variable,'bar',directory,out_prefix,opt)
-  
-  
       if(opt$multiqc){
         restruct_for_multiqc(df,variable,'cohort',opt$mq_dir)
       }
@@ -767,7 +760,6 @@ if(res['t_var_freq_bin']){
   }
   if(!opt$fillouts){
     pdf(paste0(directory,'images/',out_prefix,'_binned_vars.pdf'))
-    
       print(p)
     dev.off()
   }
@@ -790,20 +782,20 @@ sample_level_raw <- sample_level_raw[,c('tag_type','type','Tumor_Sample_Barcode'
 
 write.table(sample_level_raw,paste0(directory,'results/',out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
 sample_level_raw <- sample_level_raw[sample_level_raw$tag_type == 'restrictive',]
-df <- sample_level_raw
+
 if(!is.null(opt$called_directory)){
   c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_sample_overview_performance_measures.txt'),header = TRUE)
   c_df <- c_df[c_df$tag_type == 'restrictive',]
   c_df$Genotyped <- 'Called'
-  df$Genotyped <- 'Genotyped'
+  sample_level_raw$Genotyped <- 'Genotyped'
 
-  df <- rbind(df,c_df)
+  sample_level_raw <- rbind(sample_level_raw,c_df)
 }
 if(!opt$fillouts){
-  statistics_graphs(df,'type','boxplot',directory,out_prefix,opt)
+  statistics_graphs(sample_level_raw,'type','boxplot',directory,out_prefix,opt)
   
   if(opt$multiqc){
-    restruct_for_multiqc(df,'type','sample',opt$mq_dir)
+    restruct_for_multiqc(sample_level_raw,'type','sample',opt$mq_dir)
   }
 }
 
@@ -815,23 +807,18 @@ sample_level_variable <- function(sample){
   if(nrow(sample_level_stats) != 0){
     sample_level_stats$Tumor_Sample_Barcode <- sample
   }
-  print(variable,stderr())
   return(sample_level_stats)
 }
 
 
-
-
 variable_parsing_and_graph_sample <- function(variable) {
-
+  print(variable,stderr())
   sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, .parallel = T)
   sample_level_df <- sample_level_df[,c('tag_type','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
   sample_level_df <- sample_level_df %>% filter(tag_type == 'restrictive') 
-  
-  
-  
+
   if(variable %nin% binned_variables){
     if(variable != 'type' && any(sample_level_df$type == 'all')){
       sample_level_df <- sample_level_df %>% filter(type == 'all')
@@ -857,19 +844,20 @@ variable_parsing_and_graph_sample <- function(variable) {
   }
   return(NULL)
 }
-
 res['purity_bin'] <- FALSE
 sample_variables_to_parse <- c('substitutions',additional_variables,names(res[res]))
-print("sample_variables_to_parse",stderr())
 returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_sample)
 
 ############################################
 
 ##### PR CURVE
 if(any(names(res) == 'purity_bin')){
-  pr_curve_df <- left_join(sample_level_raw[sample_level_raw$type == 'all',],ground %>% select(c(Tumor_Sample_Barcode, purity)) %>% distinct(), by = "Tumor_Sample_Barcode")
+  pr_curve_df <- left_join(sample_level_raw,ground %>% select(c(Tumor_Sample_Barcode, purity)) %>% distinct(), by = "Tumor_Sample_Barcode")
   
-  pr_curve_df <- pr_curve_df %>% filter(statistic_name %in% c('recall','precision')) %>% filter(tag_type == 'restrictive') %>%
+  pr_curve_df <- pr_curve_df %>% filter(statistic_name %in% c('recall','precision')) %>% 
+    {
+      if("Genotyped" %in% names(.)) filter(., Genotyped == "Genotyped") else .
+    } %>%
     select(c(statistic_name,value,Tumor_Sample_Barcode,purity)) %>% distinct(statistic_name,value,Tumor_Sample_Barcode,purity) %>%
     pivot_wider(id_cols= c(Tumor_Sample_Barcode, purity),names_from = statistic_name, values_from =  value) 
     

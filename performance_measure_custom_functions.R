@@ -87,14 +87,16 @@ calc_stats_by_variant_type <- function(ground,test,type_of_analysis) {
 
 f1_stats <- function(ground_set,test_set,type_of_analysis){
   n_samples <- length(unique(c(ground_set$Tumor_Sample_Barcode,test_set$Tumor_Sample_Barcode)))
+  
+  #ONLY RUNNING PERMISSIVE TAG TYPE ON CALLED RESULTS
   if(any(c(colnames(ground_set),colnames(test_set)) == 'detectable')){
-    run_types <- c('restrictive')
+    tag_types <- c('restrictive')
     
   } else {
-    run_types <- c('restrictive','permissive')
+    tag_types <- c('restrictive','permissive')
     
   }
-  stats <- do.call(rbind,lapply(run_types, function(tag_type){
+  stats <- do.call(rbind,lapply(tag_types, function(tag_type){
     
     
     # If fillouts has been run, (detectable present), ensure opposing set is detectable at that location 
@@ -159,7 +161,7 @@ f1_stats <- function(ground_set,test_set,type_of_analysis){
     
     stats[col.nums] <- lapply(stats[col.nums], as.numeric)
     
-    stats
+    return(stats)
   }))
   
   return(stats)
@@ -267,8 +269,8 @@ statistics_graphs <- function(dataframe,variable_id,graph_type,dir,out,opt){
 }
 
 restruct_for_multiqc <- function(df,variable,level,directory){
-
-  if(any(colnames(df) == 'Genotyped')){
+  genotyped_res <- any(colnames(df) == 'Genotyped')
+  if(genotyped_res){
     df[,variable] <- paste0(df[,variable],'/',df$Genotyped)
   }
   
@@ -278,16 +280,16 @@ restruct_for_multiqc <- function(df,variable,level,directory){
   if(level != 'sample'){
     tmp <- pivot_wider(df[,c(variable,'statistic_name','value')], names_from = 'statistic_name', values_from = "value")
     tmp2 <- unique(df[,c(variable,'total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')])
-    tmp3 <- merge(tmp,tmp2)
+    tmp <- merge(tmp,tmp2)
 
-    tmp3$ID <- tmp3[,variable]
-    if(any(colnames(df) == 'Genotyped')){
-      tmp3 <- tmp3 %>% separate(get(variable), c(variable, "Genotyped"), "/")
+    tmp$ID <- tmp[,variable]
+    if(genotyped_res){
+      tmp <- tmp %>% separate(get(variable), c(variable, "Genotyped"), "/")
 
-      tmp3 <- tmp3[,c('ID',variable,'Genotyped','n_samples',statistics_to_parse)]
+      tmp <- tmp[,c('ID',variable,'Genotyped','n_samples',statistics_to_parse)]
       
     }else {
-      tmp3 <- tmp3[,c('ID',variable,'n_samples',statistics_to_parse)]
+      tmp <- tmp[,c('ID',variable,'n_samples',statistics_to_parse)]
     }
     
     suppressWarnings(cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv')))
@@ -298,7 +300,7 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     tmp <- pivot_wider(df[,c('ID','statistic_name','value')], names_from = 'statistic_name', values_from = "value")
     tmp2 <- unique(df[,c('ID','total_var_count','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')])
     tmp <- merge(tmp,tmp2)
-    tmp3 <- tmp
+ 
    #  variables <- unique(tmp[,variable])
    #  names(variables) <- unique(tmp[,variable])
    # 
@@ -315,16 +317,16 @@ restruct_for_multiqc <- function(df,variable,level,directory){
    #    return(quantile_reports)
    # }) 
 
-    if(any(colnames(df) == 'Genotyped')){
-      tmp3 <- tmp3 %>% separate(ID, c('Tumor_Sample_Barcode',variable, "Genotyped"), "/",remove = FALSE)
-      tmp3 <- tmp3[,c('ID','Tumor_Sample_Barcode',variable,'Genotyped',statistics_to_parse)]
+    if(genotyped_res){
+      tmp <- tmp %>% separate(ID, c('Tumor_Sample_Barcode',variable, "Genotyped"), "/",remove = FALSE)
+      tmp <- tmp[,c('ID','Tumor_Sample_Barcode',variable,'Genotyped',statistics_to_parse)]
     }else {
-      tmp3 <- tmp3 %>% separate(ID, c('Tumor_Sample_Barcode',variable), "/",remove = FALSE)
-      tmp3 <- tmp3[,c('ID','Tumor_Sample_Barcode',variable,statistics_to_parse)]
+      tmp <- tmp %>% separate(ID, c('Tumor_Sample_Barcode',variable), "/",remove = FALSE)
+      tmp <- tmp[,c('ID','Tumor_Sample_Barcode',variable,statistics_to_parse)]
     }
     if(nrow(tmp3) <= 500){
       suppressWarnings(cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv')))
-      suppressWarnings(write.table(tmp3,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE))
+      suppressWarnings(write.table(tmp,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE))
     }
   }
   
