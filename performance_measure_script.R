@@ -496,7 +496,7 @@ if(opt$fillouts){
   
   write(paste0("Submitting: ", length(all_samples)*2, " jobs."),stderr())
   
-  queued_jobs <- plyr::adply(all_samples, 1, fillout_commands, .parallel = F)
+  queued_jobs <- plyr::adply(all_samples, 1, fillout_commands, .parallel = T)
   
   write(paste0("Queued: ", dim(queued_jobs)[1]*2, " jobs."),stderr())
   
