@@ -1,5 +1,5 @@
 ############  REQUIRED LIBRARIES ############ 
-suppressPackageStartupMessages({library(dplyr)
+library(dplyr)
   library(data.table)
   library(stringr) 
   library(jsonlite)
@@ -14,7 +14,7 @@ suppressPackageStartupMessages({library(dplyr)
   library(cowplot)
   library(grid)
   library(gridExtra)
-  })
+
 
 ############################################
 cores = (detectCores()-1)
@@ -481,11 +481,11 @@ if(opt$fillouts){
     sample_maf <- paste0(fillout_combined_mafs,sample,'_UNIFIED_GROUND_TEST.maf')
     write.table(sample_fillout,file=sample_maf, row.names=FALSE,quote=FALSE, sep= '\t')
     
-    test_fillout_command <- paste0('bsub -J ',job_name,'_',opt$name_test,' -e ',fillout_output_dir,'logs/',job_name,'_',opt$name_test,'.err -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
+    test_fillout_command <- paste0('bsub -J ',job_name,'_',opt$name_test,' -o ',fillout_output_dir,'logs/',job_name,'_',opt$name_test,'.out -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
                                    fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', test_dir_norm,':', test_dir_norm,' -B ', test_dir_tumor,':',test_dir_tumor, ' get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --maq 20  --baq 20  --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',test_tumor_bam,' ',normal,':',test_normal_bam,' --output ',fillout_results_dir,opt$name_test,'/',opt$name_test,'_',sample,'_fillout.maf"' )
     ## (defualt is 0?)#
     
-    ground_fillout_command <- paste0('bsub -J ',job_name,'_',opt$name_ground, ' -e ',fillout_output_dir,'logs/',job_name,'_',opt$name_ground,'.err  -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
+    ground_fillout_command <- paste0('bsub -J ',job_name,'_',opt$name_ground, ' -o ',fillout_output_dir,'logs/',job_name,'_',opt$name_ground,'.out  -n 4 -R rusage[mem=5] -We 0:59 singularity exec -B $PWD:$PWD -B /juno/work/ci/resources/genomes/GRCh37/fasta:/juno/work/ci/resources/genomes/GRCh37/fasta -B ',
                                      fillout_combined_mafs, ':',fillout_combined_mafs, ' -B ', ground_dir_norm,':', ground_dir_norm,' -B ', ground_dir_tumor,':',ground_dir_tumor, ' get_base_counts_multisample.img /bin/sh -c "GetBaseCountsMultiSample --omaf --maq 20  --baq 20 --thread 4 --filter_improper_pair 0 --fasta /juno/work/ci/resources/genomes/GRCh37/fasta/b37.fasta --maf ',sample_maf, ' --bam ',sample,':',ground_tumor_bam,' ',normal,':',ground_normal_bam,' --output ',fillout_results_dir,opt$name_ground,'/',opt$name_ground,'_',sample,'_fillout.maf"' )
     system(test_fillout_command)
     
@@ -496,7 +496,7 @@ if(opt$fillouts){
   
   write(paste0("Submitting: ", length(all_samples)*2, " jobs."),stderr())
   
-  queued_jobs <- plyr::adply(all_samples, 1, fillout_commands, .parallel = T)
+  queued_jobs <- plyr::adply(all_samples, 1, fillout_commands, .parallel = F)
   
   write(paste0("Queued: ", dim(queued_jobs)[1]*2, " jobs."),stderr())
   
@@ -813,7 +813,7 @@ sample_level_variable <- function(sample){
 
 variable_parsing_and_graph_sample <- function(variable) {
   print(variable,stderr())
-  sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, .parallel = T)
+  sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, .parallel = T, mc.cores = cores)
   sample_level_df <- sample_level_df[,c('tag_type','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
