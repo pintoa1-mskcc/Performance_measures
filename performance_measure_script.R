@@ -17,7 +17,8 @@ suppressPackageStartupMessages({library(dplyr)
   })
 
 ############################################
-doParallel::registerDoParallel(cores = (detectCores()-1))
+cores = (detectCores()-1)
+doParallel::registerDoParallel(cores = cores)
 
 ############  REQUIRED FUNCTIONS ############ 
 set.seed(123) 
@@ -806,42 +807,41 @@ if(!opt$fillouts){
   }
 }
 
+sample_level_variable <- function(sample){
+  sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
+  sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
+  
+  sample_level_stats <- parse_dataframe_on_var(sample_ground,sample_test,variable,'sample')
+  if(nrow(sample_level_stats) != 0){
+    sample_level_stats$Tumor_Sample_Barcode <- sample
+  }
+  print(variable,stderr())
+  return(sample_level_stats)
+}
+
+
+
 
 variable_parsing_and_graph_sample <- function(variable) {
-  sample_level_variable <- function(sample){
-    sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
-    sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
-    
-    sample_level_stats <- parse_dataframe_on_var(sample_ground,sample_test,variable,'sample')
-    if(nrow(sample_level_stats) != 0){
-      sample_level_stats$Tumor_Sample_Barcode <- sample
-    }
-    print(variable,stderr())
-    return(sample_level_stats)
-  }
 
   sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, .parallel = T)
   sample_level_df <- sample_level_df[,c('tag_type','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
+  sample_level_df <- sample_level_df %>% filter(tag_type == 'restrictive') 
+  
+  
   
   if(variable %nin% binned_variables){
-    sample_level_df <- sample_level_df %>% filter(tag_type == 'restrictive')
-    if(variable != 'type'){
-      if (any(sample_level_df$type == 'all')) {
-        sample_level_df <- sample_level_df %>% filter(type == 'all')
-      } 
-     
-    
+    if(variable != 'type' && any(sample_level_df$type == 'all')){
+      sample_level_df <- sample_level_df %>% filter(type == 'all')
       if(!is.null(opt$called_directory)){
         c_df <- read.table(paste0(opt$called_directory,'results/',opt$called_out_prefix,'_',variable,'_sample_performance_measures.txt'),header = TRUE)
         c_df <- c_df %>% filter(tag_type == 'restrictive')
         c_df$Genotyped <- 'Called'
         sample_level_df$Genotyped <- 'Genotyped'
-        if(variable != 'type'){
-          if (any(c_df$type == 'all')) {
+        if(variable != 'type' && any(c_df$type == 'all')){
             c_df <- c_df %>% filter(type == 'all')
-          } 
         } 
         sample_level_df <- rbind(sample_level_df,c_df)
       }
