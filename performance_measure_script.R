@@ -497,7 +497,7 @@ if(opt$fillouts){
   
   write(paste0("Submitting: ", length(all_samples)*2, " jobs."),stderr())
   
-  queued_jobs <- adply(all_samples, 1, fillout_commands, .parallel = T,.progress = T,.inform = T)
+  queued_jobs <- adply(all_samples, 1, fillout_commands, .parallel = F,.progress = T,.inform = T)
   
   write(paste0("Queued: ", dim(queued_jobs)[1]*2, " jobs."),stderr())
   
@@ -650,7 +650,7 @@ variable_parsing_and_graph <- function(variable) {
   }
 }
 
-binned_vars <- adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = T)
+binned_vars <- adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = F)
 
 
 ############################################
@@ -778,7 +778,7 @@ sample_level_overviews <- function(sample){
   sample_level_stats$Tumor_Sample_Barcode <- sample
   return(sample_level_stats)
 }
-sample_level_raw <- adply(all_samples, 1, sample_level_overviews, .parallel = T,.progress = T,.inform = T)
+sample_level_raw <- adply(all_samples, 1, sample_level_overviews, .parallel = F,.progress = T,.inform = T)
 sample_level_raw <- sample_level_raw[,c('tag_type','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
 write.table(sample_level_raw,paste0(directory,'results/',out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
@@ -814,7 +814,7 @@ sample_level_variable <- function(sample){
 
 variable_parsing_and_graph_sample <- function(variable) {
   print(variable,stderr())
-  sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, .parallel = T,.progress = T,.inform = T)
+  sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, .parallel = F,.progress = T,.inform = T)
   sample_level_df <- sample_level_df[,c('tag_type','type','Tumor_Sample_Barcode',variable,'statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 
   write.table(sample_level_df,paste0(directory,'results/',out_prefix,'_',variable,'_sample_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
