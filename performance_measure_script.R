@@ -772,14 +772,14 @@ if(res['t_var_freq_bin']){
 sample_level_overviews <- function(sample){
   sample_ground <- ground[ground$Tumor_Sample_Barcode == sample,]
   sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
-  
+  print("got here 1.2",stderr())
   sample_level_stats <- calc_stats_by_variant_type(sample_ground,sample_test,'sample')
   print(str(sample_level_stats),stderr())
   sample_level_stats$Tumor_Sample_Barcode <- sample
   return(sample_level_stats)
 }
 print("got here 1 ", stderr())
-sample_level_raw <- adply(all_samples, 1, sample_level_overviews, .parallel = F,.progress = T,.inform = T)
+sample_level_raw <- adply(all_samples[c(1,2)], 1, sample_level_overviews, .parallel = F,.progress = T,.inform = T)
 sample_level_raw <- sample_level_raw[,c('tag_type','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
 print("got here 2 ", stderr())
 
