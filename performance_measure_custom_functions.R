@@ -324,7 +324,7 @@ restruct_for_multiqc <- function(df,variable,level,directory){
       tmp <- tmp %>% separate(ID, c('Tumor_Sample_Barcode',variable), "/",remove = FALSE)
       tmp <- tmp[,c('ID','Tumor_Sample_Barcode',variable,statistics_to_parse)]
     }
-    if(nrow(tmp3) <= 500){
+    if(nrow(tmp) <= 500){
       suppressWarnings(cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv')))
       suppressWarnings(write.table(tmp,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE))
     }
