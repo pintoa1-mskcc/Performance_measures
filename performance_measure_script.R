@@ -481,7 +481,7 @@ if (opt$fillouts) {
   
   write(paste0("Submitting: ", length(all_samples) * 2, " jobs."), stderr())
   
-  queued_jobs <- adply(all_samples, 1, fillout_commands, .parallel = T)
+  queued_jobs <- adply(all_samples, 1, fillout_commands, .parallel = F)
   
   write(paste0("Queued: ", dim(queued_jobs)[1] * 2, " jobs."), stderr())
   
@@ -649,7 +649,7 @@ variable_parsing_and_graph <- function(variable) {
   }
 }
 
-binned_vars <- adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = T)
+binned_vars <- adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = F)
 
 
 ############################################
@@ -796,7 +796,7 @@ sample_level_overviews <- function(sample) {
   sample_level_stats$Tumor_Sample_Barcode <- sample
   return(sample_level_stats)
 }
-sample_level_raw = adply(all_samples, 1, sample_level_overviews, .parallel = T)
+sample_level_raw = adply(all_samples, 1, sample_level_overviews, .parallel = F)
 sample_level_raw <- sample_level_raw[, c("tag_type", "type", "Tumor_Sample_Barcode", "statistic_name", "value", "lower", "upper", "total_var_count", "n_samples", "tps", "fps",
                                          "fns", "ground_set_no_ev_not_detect", "test_set_no_ev_not_detect", "vars_with_no_evidence_in_either_test_or_ground")]
 
@@ -833,7 +833,7 @@ sample_level_variable <- function(sample, variable) {
 
 variable_parsing_and_graph_sample <- function(variable) {
 
-  sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, variable = variable, .parallel = T)
+  sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, variable = variable, .parallel = F)
   sample_level_df <- sample_level_df[, c("tag_type", "type", "Tumor_Sample_Barcode", variable, "statistic_name", "value", "lower", "upper", "total_var_count", "n_samples",
                                          "tps", "fps", "fns", "ground_set_no_ev_not_detect", "test_set_no_ev_not_detect", "vars_with_no_evidence_in_either_test_or_ground")]
   
@@ -878,9 +878,9 @@ returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_s
 
 ##### PR CURVE
 if (any(names(res) == "purity_bin")) {
-  pr_curve_df <- left_join(sample_level_raw, ground %>%
+  pr_curve_df <- left_join(sample_level_raw, (ground %>%
                              select(c(Tumor_Sample_Barcode, purity)) %>%
-                             distinct(), by = "Tumor_Sample_Barcode")
+                             distinct()), by = "Tumor_Sample_Barcode")
   
   pr_curve_df <- pr_curve_df %>%
     filter(statistic_name %in% c("recall", "precision")) %>%
