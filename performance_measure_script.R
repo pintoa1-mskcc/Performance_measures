@@ -774,6 +774,7 @@ sample_level_overviews <- function(sample){
   sample_test <- test[test$Tumor_Sample_Barcode == sample ,]
   
   sample_level_stats <- calc_stats_by_variant_type(sample_ground,sample_test,'sample')
+  print(str(sample_level_stats),stderr())
   sample_level_stats$Tumor_Sample_Barcode <- sample
   return(sample_level_stats)
 }
