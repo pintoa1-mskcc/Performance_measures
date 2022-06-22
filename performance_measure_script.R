@@ -585,7 +585,6 @@ if(!is.null(opt$bed_file)){
   test_off <- test %>% filter(on_target == FALSE)
   test <- test %>% filter(on_target == TRUE)
 }
-
 overview_df <- calc_stats_by_variant_type(ground,test,'cohort')
 overview_df$Tumor_Sample_Barcode <- 'Cohort'
 overview_df <- overview_df[,c('tag_type','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
@@ -778,8 +777,10 @@ sample_level_overviews <- function(sample){
   sample_level_stats$Tumor_Sample_Barcode <- sample
   return(sample_level_stats)
 }
+print("got here 1 ", stderr())
 sample_level_raw <- adply(all_samples, 1, sample_level_overviews, .parallel = F,.progress = T,.inform = T)
 sample_level_raw <- sample_level_raw[,c('tag_type','type','Tumor_Sample_Barcode','statistic_name','value','lower','upper','total_var_count','n_samples','tps','fps','fns','ground_set_no_ev_not_detect','test_set_no_ev_not_detect','vars_with_no_evidence_in_either_test_or_ground')]
+print("got here 2 ", stderr())
 
 write.table(sample_level_raw,paste0(directory,'results/',out_prefix,'_sample_overview_performance_measures.txt'),quote = FALSE,row.names = FALSE,sep = '\t')
 sample_level_raw <- sample_level_raw[sample_level_raw$tag_type == 'restrictive',]
@@ -846,6 +847,8 @@ variable_parsing_and_graph_sample <- function(variable) {
   return(NULL)
 }
 res['purity_bin'] <- FALSE
+print("got here 3 ", stderr())
+
 sample_variables_to_parse <- c('substitutions',additional_variables,names(res[res]))
 returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_sample)
 
