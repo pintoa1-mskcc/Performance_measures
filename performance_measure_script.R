@@ -878,9 +878,9 @@ returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_s
 
 ##### PR CURVE
 if (any(names(res) == "purity_bin")) {
-  pr_curve_df <- left_join(sample_level_raw, ground %>%
+  pr_curve_df <- left_join(sample_level_raw, (ground %>%
                              select(c(Tumor_Sample_Barcode, purity)) %>%
-                             distinct(), by = "Tumor_Sample_Barcode")
+                             distinct()), by = "Tumor_Sample_Barcode")
   
   pr_curve_df <- pr_curve_df %>%
     filter(statistic_name %in% c("recall", "precision")) %>%
