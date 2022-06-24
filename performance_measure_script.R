@@ -45,6 +45,7 @@ parser$add_argument("-p", "--fillout_to_pr", action = "store_true", help = "Logi
 parser$add_argument("-c", "--called_directory", type = "character", default = NULL, help = " REQUIRED for fillout_to_pr mode.Location of performance measure results on CALLED mutations (not genotyped). If provided, will generated statistics graphs for the combined results.")
 parser$add_argument("-u", "--called_out_prefix", type = "character", default = NULL, help = "OPTIONAL for fillout_to_pr mode. Out prefix for performance measure called results. If not provided, assumes the out_prefix provided is of form \"fillout_%called_out_prefix%\"")
 parser$add_argument("-m", "--multiqc", action = "store_true", help = "OPTIONAL. Run multiqc after analysis. If you are running fillouts through this script, multiqc will automatically be run once genotyped analysis is complete.")
+parser$add_argument("-P", "--Parallel", action = "store_true", help = "OPTIONAL. Run in parallel. Only recommended if you have a large (>1k) cohort.")
 
 opt = parser$parse_args()
 
@@ -481,7 +482,7 @@ if (opt$fillouts) {
   
   write(paste0("Submitting: ", length(all_samples) * 2, " jobs."), stderr())
   
-  queued_jobs <- adply(all_samples, 1, fillout_commands, .parallel = F)
+  queued_jobs <- adply(all_samples, 1, fillout_commands, .parallel = opt$Parallel)
   
   write(paste0("Queued: ", dim(queued_jobs)[1] * 2, " jobs."), stderr())
   
@@ -649,7 +650,7 @@ variable_parsing_and_graph <- function(variable) {
   }
 }
 
-binned_vars <- adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = F)
+binned_vars <- adply(variables_to_parse, 1, variable_parsing_and_graph, .parallel = opt$Parallel)
 
 
 ############################################
@@ -796,7 +797,7 @@ sample_level_overviews <- function(sample) {
   sample_level_stats$Tumor_Sample_Barcode <- sample
   return(sample_level_stats)
 }
-sample_level_raw = adply(all_samples, 1, sample_level_overviews, .parallel = F)
+sample_level_raw = adply(all_samples, 1, sample_level_overviews, .parallel = opt$Parallel)
 sample_level_raw <- sample_level_raw[, c("tag_type", "type", "Tumor_Sample_Barcode", "statistic_name", "value", "lower", "upper", "total_var_count", "n_samples", "tps", "fps",
                                          "fns", "ground_set_no_ev_not_detect", "test_set_no_ev_not_detect", "vars_with_no_evidence_in_either_test_or_ground")]
 
@@ -833,7 +834,7 @@ sample_level_variable <- function(sample, variable) {
 
 variable_parsing_and_graph_sample <- function(variable) {
 
-  sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, variable = variable, .parallel = F)
+  sample_level_df <- plyr::adply(all_samples, 1, sample_level_variable, variable = variable, .parallel = opt$Parallel)
   sample_level_df <- sample_level_df[, c("tag_type", "type", "Tumor_Sample_Barcode", variable, "statistic_name", "value", "lower", "upper", "total_var_count", "n_samples",
                                          "tps", "fps", "fns", "ground_set_no_ev_not_detect", "test_set_no_ev_not_detect", "vars_with_no_evidence_in_either_test_or_ground")]
   
