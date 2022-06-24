@@ -85,3 +85,20 @@ Sym links are not functional when genotyping.
 
 If running on target analysis:
 - bedR
+
+# General Wiki
+When we run this code, we made some assumptions about use cases. 
+  ## 1. Ground Annotations are assumed to be the desired annotations
+  The most important thing to remember when reviewing the results is when you are specifying your ground and test MAFs, the GROUND annotations are assumed to be the annotations you want to calculate recall and precision for. Therefore we set all _shared_ TEST annotations to the ground annotations. If a variant in tests exists but isnt in GROUND, the test annotation is retained. 
+  
+    The significance of the annotations determine whether or not a variant is "recalled" when we are splitting annotations. E.G.: Say you have validated oncogenic variants in your GROUND file, but your test file was annotated prior with non-validated annotations. We only care if the variant is present or absent in the previous call, not if the annotation is correct. This allows us the assess the differences in performance only on presence or absence of a call. 
+     A warning will be outputted in your log file to tell you when annotations have changed. Results can be analysed in the resulting MAFs
+  ## 2.  
+# Genotyping Wiki
+If you run the --fillouts flag, there are some additional exceptions and use case assumptions to be made. 
+   ## 1. T_var_freq analysis
+        We will use the CALLED variant frequency as the t_var_freq_bin value. When we run fillouts, we must include  chromosome, sample, start, end, **REF AND ALT ** to get any results. Called variant frequency is assumped to be correct. 
+   ## 2. No Analysis of Permissive Tag Type
+         Since genotyping is dependent on chromosome, sample, start, end, **REF AND ALT ** we cannot say definitively that the filled out locations will make sense with a permissive (Chrom, start, sample). therefore we do not run permissive tag type.
+   ## 3.  Must have matching samples in test and ground cohorts
+         Your mapping files for both TEST and GROUND **must** have the same cohort. Your mapping files contain all the BAMs which you want to run fillouts on. If a sample exists in one cohort mapping file but not the other, the tool will fail. 
