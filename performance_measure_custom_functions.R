@@ -293,7 +293,7 @@ restruct_for_multiqc <- function(df,variable,level,directory){
     }
     
     suppressWarnings(cat("#plot_type: 'table' \n ",file=paste0(directory,variable,'_',level,'_mqc.tsv')))
-    suppressWarnings(write.table(tmp3,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE))
+    suppressWarnings(write.table(tmp,paste0(directory,variable,'_',level,'_mqc.tsv'),sep= '\t',append=TRUE,row.names = FALSE))
   } else {
     df$ID <- paste(df$Tumor_Sample_Barcode,df[,variable], sep = '/')
     
