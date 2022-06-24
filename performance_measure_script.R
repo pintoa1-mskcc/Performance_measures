@@ -818,7 +818,11 @@ if (!opt$fillouts) {
   if (opt$multiqc) {
     restruct_for_multiqc(sample_level_raw, "type", "sample", opt$mq_dir)
   }
+  if(opt$fillout_to_pr){
+    sample_level_raw <- sample_level_raw[sample_level_raw$Genotyped == 'Genotyped',]
+  }
 }
+
 sample_level_variable <- function(sample, variable) {
   sample_ground <- ground[ground$Tumor_Sample_Barcode == sample, ]
   sample_test <- test[test$Tumor_Sample_Barcode == sample, ]
@@ -876,7 +880,7 @@ sample_variables_to_parse <- c("substitutions", additional_variables, names(res[
 returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_sample)
 
 ############################################
-
+### SOMETHING IS WRONG HEREEEREE
 ##### PR CURVE
 if (any(names(res) == "purity_bin")) {
   pr_curve_df <- left_join(sample_level_raw, (ground %>%
