@@ -134,7 +134,7 @@ if (opt$multiqc && !opt$fillouts) {
 
 if (opt$fillout_to_pr) {
   if (is.null(opt$called_directory)) {
-    stop("If expecting combined results (fillout_to_pr == TRUE), must provide original directory.")
+    stop("If expecting called and genotyped results (fillout_to_pr == TRUE), must provide original directory.")
   }
 }
 ############################################
