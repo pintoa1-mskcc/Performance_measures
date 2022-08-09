@@ -162,7 +162,7 @@ if (any(c(missing_in_test, missing_in_ground))) {
     names(missing_in_test) <- paste0("Missing_In_", opt$name_test, "Test_Samples")
   }
   warning_return_1 <- c(missing_in_ground, missing_in_test)
-  colnames(warning_return_1) <- c(paste0("Samples missing in ", opt$name_ground), paste0("Samples missing in ", opt$name_test))
+  names(warning_return_1) <- "Samples with 0 Analysis"
   write.table(warning_return_1, file = paste0(directory, "logs/", out_prefix, "_missing_samples.txt"), quote = FALSE)
 }
 
