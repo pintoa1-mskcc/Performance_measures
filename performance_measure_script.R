@@ -212,9 +212,9 @@ if (!is.null(opt$bed)) {
   ground_bed <- fread(paste0(directory, opt$out_prefix, "_", opt$name_ground, "_variant_locs.bed"), data.table = FALSE)
   test_bed <- fread(paste0(directory, opt$out_prefix, "_", opt$name_test, "_variant_locs.bed"), data.table = FALSE)
   ground <- ground %>%
-    mutate(on_target = ifelse(bed_tag %in% bed_ground$V4, TRUE, FALSE))
+    mutate(on_target = ifelse(bed_tag %in% ground_bed$V4, TRUE, FALSE))
   test <- test %>%
-    mutate(on_target = ifelse(bed_tag %in% bed_test$V4, TRUE, FALSE))
+    mutate(on_target = ifelse(bed_tag %in% test_bed$V4, TRUE, FALSE))
   
   system(paste0("mv ", directory, opt$out_prefix, "_", opt$name_ground, "_variant_locs.bed ", directory, "results/"))
   system(paste0("mv ", directory, opt$out_prefix, "_", opt$name_test, "_variant_locs.bed ", directory, "results/"))
