@@ -62,8 +62,8 @@ if (opt$fillouts) {
   }
 }
 
-test <- fread(opt$test, data.table = FALSE)
-ground <- fread(opt$ground, data.table = FALSE)
+test <- fread(opt$test, data.table = FALSE, fill = T)
+ground <- fread(opt$ground, data.table = FALSE,fill =T)
 
 if (!is.null(opt$bed)) {
   library(bedr)
@@ -177,7 +177,7 @@ if (opt$fillout_to_pr) {
   
 }
 ### CHECK FOR ALL REQUIRED FLAGS
-needed_flags <- c("cf", "purity", "oncogenic", "Variant_Classification", "t_var_freq")
+needed_flags <- c("cf", "purity", "ONCOGENIC", "Variant_Classification", "t_var_freq")
 res <- sapply(needed_flags, function(variable) {
   if (variable %nin% colnames(test) | variable %nin% colnames(ground)) {
     warning(paste0(variable, " is missing from MAF(s) header.  This analysis will not be run"))
@@ -233,9 +233,9 @@ test <- test %>%
 shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
 if (res["oncogenic_tf"]) {
   ground <- ground %>%
-    mutate(oncogenic_tf = ifelse(grepl("ncogenic", oncogenic), "ONCOGENIC", "OTHER"))
+    mutate(oncogenic_tf = ifelse(grepl("ncogenic", ONCOGENIC), "ONCOGENIC", "OTHER"))
   test <- test %>%
-    mutate(oncogenic_tf = ifelse(grepl("ncogenic", oncogenic), "ONCOGENIC", "OTHER"))
+    mutate(oncogenic_tf = ifelse(grepl("ncogenic", ONCOGENIC), "ONCOGENIC", "OTHER"))
   warning(paste0("For the purposes of this analysis, the shared variants ongogenic flag is set to the ", opt$name_ground, " files' oncogenic values for accurate comparison."))
   
   test[match(shared_variants, test$var_tag), "oncogenic_tf"] <- ground[match(shared_variants, ground$var_tag), "oncogenic_tf"]
@@ -882,7 +882,7 @@ returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_s
 ############################################
 ### SOMETHING IS WRONG HEREEEREE
 ##### PR CURVE
-if (any(names(res) == "purity_bin")) {
+if (res["purity_bin"])) {
   pr_curve_df <- left_join(sample_level_raw %>% filter(type == 'all'), (ground %>%
                              select(c(Tumor_Sample_Barcode, purity)) %>%
                              distinct()), by = "Tumor_Sample_Barcode")
