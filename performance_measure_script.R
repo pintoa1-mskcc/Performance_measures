@@ -163,7 +163,7 @@ if (any(c(missing_in_test, missing_in_ground))) {
   }
   warning_return_1 <- c(missing_in_ground, missing_in_test)
   names(warning_return_1) <- "Samples with 0 Analysis"
-  write(warning_return_1, file = paste0(directory, "logs/", out_prefix, "_missing_samples.txt"), quote = FALSE)
+  write(warning_return_1, file = paste0(directory, "logs/", out_prefix, "_missing_samples.txt"))
 }
 
 # Keep test tumor samples which are not misisngi n ground
