@@ -13,6 +13,8 @@ NOTE: This analysis must be run on JUNO if utilizing genotyping or HTML report g
 ### Required
 R 4.0+
 If you want to run genotyping and/or multiqc, job must be submitted to JUNO scheduler. 
+MAF file headers must match TEMPO output, at minimum *Chromosome;Start_Position;End_Position;Reference_Allele;Tumor_Seq_Allele, Tumor_Sample_Barcode; Variant_Type*
+
 
 #### Basic Analysis
 

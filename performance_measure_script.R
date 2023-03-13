@@ -62,8 +62,8 @@ if (opt$fillouts) {
   }
 }
 
-test <- fread(opt$test, data.table = FALSE)
-ground <- fread(opt$ground, data.table = FALSE)
+test <- fread(opt$test, data.table = FALSE, fill = T)
+ground <- fread(opt$ground, data.table = FALSE,fill =T)
 
 if (!is.null(opt$bed)) {
   library(bedr)
@@ -154,7 +154,7 @@ missing_in_test <- unique(ground$Tumor_Sample_Barcode) %nin% unique(test$Tumor_S
 if (any(c(missing_in_test, missing_in_ground))) {
   warning("Sample(s) exists in one MAF but not in the other. These samples are retained in analysis but will have NA or zero values for either recall or precision. See logs/ for more information")
   missing_in_ground <- unique(test$Tumor_Sample_Barcode)[missing_in_ground]
-  missing_in_test <- unique(test$Tumor_Sample_Barcode)[missing_in_test]
+  missing_in_test <- unique(ground$Tumor_Sample_Barcode)[missing_in_test]
   if (length(missing_in_ground) > 0) {
     names(missing_in_ground) <- paste0("Missing_In_", opt$name_ground, "_Samples")
   }
@@ -163,7 +163,7 @@ if (any(c(missing_in_test, missing_in_ground))) {
   }
   warning_return_1 <- c(missing_in_ground, missing_in_test)
   names(warning_return_1) <- "Samples with 0 Analysis"
-  write.table(warning_return_1, file = paste0(directory, "logs/", out_prefix, "_missing_samples.txt"), quote = FALSE)
+  write(warning_return_1, file = paste0(directory, "logs/", out_prefix, "_missing_samples.txt"))
 }
 
 # Keep test tumor samples which are not misisngi n ground
@@ -177,7 +177,7 @@ if (opt$fillout_to_pr) {
   
 }
 ### CHECK FOR ALL REQUIRED FLAGS
-needed_flags <- c("cf", "purity", "oncogenic", "Variant_Classification", "t_var_freq")
+needed_flags <- c("cf", "purity", "ONCOGENIC", "Variant_Classification", "t_var_freq")
 res <- sapply(needed_flags, function(variable) {
   if (variable %nin% colnames(test) | variable %nin% colnames(ground)) {
     warning(paste0(variable, " is missing from MAF(s) header.  This analysis will not be run"))
@@ -212,9 +212,9 @@ if (!is.null(opt$bed)) {
   ground_bed <- fread(paste0(directory, opt$out_prefix, "_", opt$name_ground, "_variant_locs.bed"), data.table = FALSE)
   test_bed <- fread(paste0(directory, opt$out_prefix, "_", opt$name_test, "_variant_locs.bed"), data.table = FALSE)
   ground <- ground %>%
-    mutate(on_target = ifelse(bed_tag %in% bed_ground$V4, TRUE, FALSE))
+    mutate(on_target = ifelse(bed_tag %in% ground_bed$V4, TRUE, FALSE))
   test <- test %>%
-    mutate(on_target = ifelse(bed_tag %in% bed_test$V4, TRUE, FALSE))
+    mutate(on_target = ifelse(bed_tag %in% test_bed$V4, TRUE, FALSE))
   
   system(paste0("mv ", directory, opt$out_prefix, "_", opt$name_ground, "_variant_locs.bed ", directory, "results/"))
   system(paste0("mv ", directory, opt$out_prefix, "_", opt$name_test, "_variant_locs.bed ", directory, "results/"))
@@ -233,14 +233,15 @@ test <- test %>%
 shared_variants <- test$var_tag[test$var_tag %in% ground$var_tag]
 if (res["oncogenic_tf"]) {
   ground <- ground %>%
-    mutate(oncogenic_tf = ifelse(grepl("ncogenic", oncogenic), "ONCOGENIC", "OTHER"))
+    mutate(oncogenic_tf = ifelse(grepl("ncogenic", ONCOGENIC), "ONCOGENIC", "OTHER"))
   test <- test %>%
-    mutate(oncogenic_tf = ifelse(grepl("ncogenic", oncogenic), "ONCOGENIC", "OTHER"))
+    mutate(oncogenic_tf = ifelse(grepl("ncogenic", ONCOGENIC), "ONCOGENIC", "OTHER"))
   warning(paste0("For the purposes of this analysis, the shared variants ongogenic flag is set to the ", opt$name_ground, " files' oncogenic values for accurate comparison."))
   
   test[match(shared_variants, test$var_tag), "oncogenic_tf"] <- ground[match(shared_variants, ground$var_tag), "oncogenic_tf"]
   
 }
+res["clonality"] <- FALSE
 if (res["clonality"]) {
   ground <- ground %>%
     mutate(clonality = ifelse(is.na(cf) | cf < (0.6 * purity), "INDETERMINATE", ifelse((ccf_expected_copies > 0.8 | (ccf_expected_copies > 0.7 & ccf_expected_copies_upper >
@@ -402,7 +403,7 @@ if (opt$fillouts) {
   
   colnames(ground_tmp)[grepl("^t_", colnames(ground_tmp))] <- paste0(colnames(ground_tmp)[grepl("^t_", colnames(ground_tmp))], "_called_ground")
   colnames(test_tmp)[grepl("^t_", colnames(test_tmp))] <- paste0(colnames(test_tmp)[grepl("^t_", colnames(test_tmp))], "_called_test")
-  
+ #  colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)] <- paste0( colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)],"_test_col")
   ground_tmp[, "t_ref_count"] <- ground$t_ref_count
   ground_tmp[, "t_alt_count"] <- ground$t_alt_count
   fillout_maf <- merge(ground_tmp, test_tmp[test_tmp$var_tag %in% shared_variants, c("var_tag", colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)])], by = "var_tag",
@@ -942,7 +943,7 @@ if (opt$fillouts) {
     
     Sys.sleep(60)  ## Check for the jobs completion every couple of mins.
   }
-  
+  additional_var <- ifelse(is.null(additional_variables),"",paste0(" -v  ",additional_variables ))
   
   if (is.null(opt$bed_file)) {
     
@@ -950,7 +951,7 @@ if (opt$fillouts) {
                   ground_dir, " -d ", directory, " -o ", out_prefix, " -p TRUE -e ", test_dir, " -m ", fillout_combined_mafs, " -j TRUE\""))
   } else {
     system(paste0("bsub -J  collect_fillouts_results -o ", directory, "logs/", out_prefix, "_fillout_restructuring.out -n 2 -R rusage[mem=5] -We 0:59 \"Rscript fillouts_restruct.R -r ",
-                  ground_dir, " -d ", directory, " -o ", out_prefix, " -p TRUE -e ", test_dir, " -m ", fillout_combined_mafs, " -b ", opt$bed_file, " -j TRUE\""))
+                  ground_dir, additional_var, " -d ", directory, " -o ", out_prefix, " -p TRUE -e ", test_dir, " -m ", fillout_combined_mafs, " -b ", opt$bed_file, " -j TRUE\""))
     
   }
   
