@@ -18,7 +18,6 @@ parser$add_argument("-j", "--juno" , type = 'logical',default = FALSE)
 parser$add_argument("-b","--bed_file", type = "character", default = NULL, help = "If you wish to use a bed file for targetted performance measures.")
 parser$add_argument("-s", "--script",type = 'character',default = getwd(),help = 'If running performance measures, expects Rscript to be in working directory If not, please specify directory.')
 parser$add_argument('-c','--called_directory',type = "character", default=NULL, help = 'Specify the directory containing the performance measures for CALLED MAF results')
-parser$add_argument('-v','--additional_variables',type = "character", default=NULL, help = '')
 opt=parser$parse_args()
 
 
@@ -106,16 +105,13 @@ if(opt$performance_measures) {
   }
 
 
-  if(is.null(opt$bed_file)){
-    bsub_command <- paste0(bsub_command,'"')
-  } else {
+  if(!is.null(opt$bed_file)){
+
     bsub_command <- paste0(bsub_command, ' -b ',opt$bed_file ,'"')
   }
 
 
-  if(is.null(opt$additional_variables)){
-    bsub_command <- paste0(bsub_command,'"')
-  } else {
+  if(!is.null(opt$additional_variables)){
     bsub_command <- paste0(bsub_command, ' -v ',opt$additional_variables ,'"')
   }
 
