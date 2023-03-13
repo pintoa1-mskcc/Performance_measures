@@ -399,9 +399,12 @@ if (opt$fillouts) {
  #  colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)] <- paste0( colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)],"_test_col")
   ground_tmp[, "t_ref_count"] <- ground$t_ref_count
   ground_tmp[, "t_alt_count"] <- ground$t_alt_count
+
   fillout_maf <- merge(ground_tmp, test_tmp[test_tmp$var_tag %in% shared_variants, c("var_tag", colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)])], by = "var_tag",
                        all.x = TRUE)
   test_tmp <- test_tmp[test_tmp$var_tag %nin% shared_variants, ]
+  test_tmp <- type.convert(test_tmp)
+  fillout_maf <- type.convert(test_tmp)
   fillout_maf <- bind_rows(fillout_maf, test_tmp)
 
 
