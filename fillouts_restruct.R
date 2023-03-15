@@ -107,14 +107,14 @@ if(opt$performance_measures) {
 
   if(!is.null(opt$bed_file)){
 
-    bsub_command <- paste0(bsub_command, ' -b ',opt$bed_file ,'"')
+    bsub_command <- paste0(bsub_command, ' -b ',opt$bed_file )
   }
 
 
   if(!is.null(opt$add_vars)){
-    bsub_command <- paste0(bsub_command, ' -v ',opt$add_vars ,'"')
+    bsub_command <- paste0(bsub_command, ' -v ',opt$add_vars )
   }
 
-
+  bsub_command <- paste0(bsub_command, '"')
   system(bsub_command)
 }
