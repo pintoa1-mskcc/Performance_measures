@@ -113,8 +113,7 @@ if (!is.null(opt$additional_variables)) {
   }
   for (variable in additional_variables) {
     if (variable %nin% colnames(test) | variable %nin% colnames(ground)) {
-      warning("A provided additional variable to parse does not exist in provided MAFs. This variable will be removed from analysis")
-      additional_variables <- additional_variables[additional_variables != variable]
+      stop("ERROR: A provided additional variable to parse does not exist in provided MAFs.")
     } else {
       test[, variable] <- as.character(test[, variable])
       ground[, variable] <- as.character(ground[, variable])
