@@ -98,7 +98,7 @@ if(opt$performance_measures) {
   name_test <- basename(opt$test_directory)
   name_ground <- basename(opt$ground_directory)
 
-  bsub_command <- paste0('bsub -o ', opt$directory,'logs/',opt$out_prefix, '_performance_measure_fillout.out -n 2 -R "rusage[mem=8]" -W 1:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -s ',name_test,' -n ',name_ground, ' -c ', opt$directory,' -m  -p  -o fillout_', opt$out_prefix , " -v ", opt$add_vars)
+  bsub_command <- paste0('bsub -o ', opt$directory,'logs/',opt$out_prefix, '_performance_measure_fillout.out -n 2 -R "rusage[mem=8]" -W 1:59 "Rscript ',opt$script,'performance_measure_script.R -g ', ground_file_name,' -t ', test_file_name, ' -d ',opt$directory,' -s ',name_test,' -n ',name_ground, ' -c ', opt$directory,' -m  -p  -o fillout_', opt$out_prefix )
 
   if(!is.null(opt$called_directory)){
     bsub_command <- paste0(bsub_command, ' -c ', opt$called_directory, ' -u ', opt$out_prefix)
@@ -111,8 +111,8 @@ if(opt$performance_measures) {
   }
 
 
-  if(!is.null(opt$additional_variables)){
-    bsub_command <- paste0(bsub_command, ' -v ',opt$additional_variables ,'"')
+  if(!is.null(opt$add_vars)){
+    bsub_command <- paste0(bsub_command, ' -v ',opt$add_vars ,'"')
   }
 
 
