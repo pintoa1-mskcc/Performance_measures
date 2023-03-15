@@ -954,7 +954,7 @@ if (opt$fillouts) {
     init_bsub <- paste0(init_bsub, " -b ", opt$bed_file)
 
   }
-  init_bsub <- paste0(init_bsubd, '"')
+  init_bsub <- paste0(init_bsub, '"')
 
   system(init_bsub)
   #
