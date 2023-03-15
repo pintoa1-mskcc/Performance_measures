@@ -945,15 +945,17 @@ if (opt$fillouts) {
   }
 
   init_bsub <- (paste0("bsub -J  collect_fillouts_results -o ", directory, "logs/", out_prefix, "_fillout_restructuring.out -n 2 -R rusage[mem=5] -We 0:59 \"Rscript fillouts_restruct.R -r ",
-                       ground_dir, " -d ", directory, " -o ", out_prefix, " -p TRUE -e ", test_dir, " -m ", fillout_combined_mafs, " -j TRUE\""))
+                       ground_dir, " -d ", directory, " -o ", out_prefix, " -p TRUE -e ", test_dir, " -m ", fillout_combined_mafs, " -j TRUE "))
   if(!is.null(additional_variables)){
-    init_bsub <- paste0(init_bsub," -v  ",additional_variables )
+    init_bsub <- paste0(init_bsub," -v  ", opt$additional_variables )
   }
 
   if (!is.null(opt$bed_file)) {
     init_bsub <- paste0(init_bsub, " -b ", opt$bed_file)
 
   }
+  init_bsub <- paste0(init_bsubd, '"')
+
   system(init_bsub)
   #
 } else {
