@@ -379,11 +379,17 @@ if (opt$fillout_to_pr) {
 i <- sapply(test, is.factor)
 test[i] <- lapply(test[i], as.character)
 
+
 i <- sapply(ground, is.factor)
 ground[i] <- lapply(ground[i], as.character)
 
+whats_diff <- sapply(colnames(test[colnames(test) %in% colnames(ground)]), function(col){
+  typeof(test[,col]) == typeof(ground[,col])
+})
 
+test[,names(whats_diff[which(!whats_diff)])] <- lapply(test[,names(whats_diff[which(!whats_diff)])],as.character)
 
+ground[,names(whats_diff[which(!whats_diff)])] <- lapply(ground[,names(whats_diff[which(!whats_diff)])],as.character)
 
 
 ############################################
@@ -403,12 +409,9 @@ if (opt$fillouts) {
   fillout_maf <- merge(ground_tmp, test_tmp[test_tmp$var_tag %in% shared_variants, c("var_tag", colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)])], by = "var_tag",
                        all.x = TRUE,all.y = F)
   test_tmp <- test_tmp[test_tmp$var_tag %nin% shared_variants, ]
-  test_tmp <- type.convert(test_tmp)
-  fillout_maf <- type.convert(fillout_maf)
+
   fillout_maf <- bind_rows(fillout_maf, test_tmp)
-  needed_cols <- c("Hugo_Symbol", "Chromosome", "Start_Position", "End_Position", "Reference_Allele", "Tumor_Seq_Allele1", "Tumor_Seq_Allele2", "Tumor_Sample_Barcode", "Matched_Norm_Sample_Barcode", "t_ref_count", "t_alt_count", "n_ref_count", "n_alt_count", "Variant_Classification")
-  no_duplicates <- colnames(fillout_maf)[duplicated(colnames(fillout_maf))]
-  fillout_maf <- fillout_maf[,c(needed_cols, no_duplicates[no_duplicates %nin% needed_cols)]]
+
   fillout_maf[is.na(fillout_maf$Called_in_Ground), "Called_in_Ground"] <- TRUE
   fillout_maf[is.na(fillout_maf$Called_in_Test), "Called_in_Test"] <- TRUE
 
