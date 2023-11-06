@@ -1,4 +1,4 @@
-library(plyr)
+suppressPackageStartupMessages({library(plyr)
 library(dplyr)
 library(data.table)
 library(stringr)
@@ -14,7 +14,7 @@ library(doParallel)
 library(cowplot)
 library(grid)
 library(gridExtra)
-
+})
 
 ############################################
 cores = (detectCores() - 1)
@@ -656,7 +656,7 @@ binned_vars <- adply(variables_to_parse, 1, variable_parsing_and_graph, .paralle
 ############################################
 
 ######## SPECIAL BINNED PLOTS ########
-if (res["t_var_freq_bin"]) {
+if (res["t_var_freq_bin"] & res["purity_bin"]) {
   binned_vars <- binned_vars %>%
     filter(type == "all") %>%
     filter(tag_type == "restrictive")
