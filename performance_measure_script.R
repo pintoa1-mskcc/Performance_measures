@@ -170,6 +170,8 @@ if (opt$fillout_to_pr) {
 }
 ### CHECK FOR ALL REQUIRED FLAGS
 needed_flags <- c("cf", "purity", "ONCOGENIC", "Variant_Classification", "t_var_freq")
+names(needed_flags) <- c("clonality", "purity_bin", "oncogenic_tf", "is_non_syn_mut", "t_var_freq_bin")
+
 res <- sapply(needed_flags, function(variable) {
   if (variable %nin% colnames(test) | variable %nin% colnames(ground)) {
     warning(paste0(variable, " is missing from MAF(s) header.  This analysis will not be run"))
@@ -179,7 +181,6 @@ res <- sapply(needed_flags, function(variable) {
     return(TRUE)
   }
 })
-names(res) <- c("clonality", "purity_bin", "oncogenic_tf", "is_non_syn_mut", "t_var_freq_bin")
 
 # If a BED is provided, filter all variants so only on target is analyzed
 if (!is.null(opt$bed)) {
@@ -264,7 +265,6 @@ if (res["is_non_syn_mut"]) {
   test[match(shared_variants, test$var_tag), "is_non_syn_mut"] <- ground[match(shared_variants, ground$var_tag), "is_non_syn_mut"]
 
 }
-### We will calcaulate clonality for test var tags in case they are false positives, but true positives must match between ground and test var tags
 
 
 # Same assumption will hold for any additional variables
@@ -397,11 +397,19 @@ ground[,names(whats_diff[which(!whats_diff)])] <- lapply(ground[,names(whats_dif
 if (opt$fillouts) {
   ground_tmp <- ground
   test_tmp <- test
+  ## if one of the columns of interest does not exist in both, remove the column from the one if does exist in
+  if(!all(res)){
 
+    ### remove those columns not from both
+    test_tmp[,colnames(test_tmp) %in% needed_flags[!res] ] <- NULL
+    ground_tmp[,colnames(ground_tmp) %in% needed_flags[!res] ] <- NULL
+    
+  }
 
   colnames(ground_tmp)[grepl("^t_", colnames(ground_tmp))] <- paste0(colnames(ground_tmp)[grepl("^t_", colnames(ground_tmp))], "_called_ground")
   colnames(test_tmp)[grepl("^t_", colnames(test_tmp))] <- paste0(colnames(test_tmp)[grepl("^t_", colnames(test_tmp))], "_called_test")
  #  colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)] <- paste0( colnames(test_tmp)[colnames(test_tmp) %nin% colnames(ground_tmp)],"_test_col")
+  ## set t_ref_count ref to gound 
   ground_tmp[, "t_ref_count"] <- ground$t_ref_count
   ground_tmp[, "t_alt_count"] <- ground$t_alt_count
 
@@ -416,7 +424,7 @@ if (opt$fillouts) {
 
 
   fillout_maf <- as.data.frame(unnest(fillout_maf, substitutions))
-
+  
   fillout_mapping_test <- read.table(opt$test_fillout_mapping, header = TRUE, stringsAsFactors = FALSE)
   fillout_mapping_ground <- read.table(opt$ground_fillout_mapping, header = TRUE, stringsAsFactors = FALSE)
 
@@ -874,6 +882,7 @@ variable_parsing_and_graph_sample <- function(variable) {
   }
   return(NULL)
 }
+## cannot run sample level for purity as purity is set at the sample level
 res["purity_bin"] <- FALSE
 
 sample_variables_to_parse <- c("substitutions", additional_variables, names(res[res]))
@@ -882,38 +891,38 @@ returning_null <- lapply(sample_variables_to_parse, variable_parsing_and_graph_s
 ############################################
 ### SOMETHING IS WRONG HEREEEREE
 ##### PR CURVE
-if (res["purity_bin"]) {
-  pr_curve_df <- left_join(sample_level_raw %>% filter(type == 'all'), (ground %>%
-                             select(c(Tumor_Sample_Barcode, purity)) %>%
-                             distinct()), by = "Tumor_Sample_Barcode")
-
-  pr_curve_df <- pr_curve_df %>%
-    filter(statistic_name %in% c("recall", "precision")) %>%
-    {
-      if ("Genotyped" %in% names(.))
-        filter(., Genotyped == "Genotyped") else .
-    } %>%
-    select(c(statistic_name, value, Tumor_Sample_Barcode, purity)) %>%
-    distinct(statistic_name, value, Tumor_Sample_Barcode, purity) %>%
-    pivot_wider(id_cols = c(Tumor_Sample_Barcode, purity), names_from = statistic_name, values_from = value)
-
-  if (!opt$fillouts) {
-    if (opt$multiqc) {
-      png(paste0(opt$mq_dir, "precision_recall_plot_mqc.png"), width = 600)
-      print(ggplot(pr_curve_df, aes(x = recall, y = precision, color = purity)) + geom_point() + scale_color_gradient() + theme_classic() + theme(axis.text.x = element_text(angle = 45,
-                                                                                                                                                                             hjust = 1), legend.position = "right", legend.background = element_blank()) + ggtitle("Precision Recall Per Sample") + ylim(0, 1) + xlim(0, 1))
-      dev.off()
-
-    }
-
-
-    pdf(paste0(directory, "images/", out_prefix, "_precision_recall_plot.pdf"))
-
-    ggplot(pr_curve_df, aes(x = recall, y = precision, color = purity)) + geom_point() + scale_color_gradient() + theme_classic() + theme(axis.text.x = element_text(angle = 45,
-                                                                                                                                                                     hjust = 1), legend.position = "right", legend.background = element_blank()) + ggtitle("Precision Recall Per Sample") + ylim(0, 1) + xlim(0, 1)
-    dev.off()
-  }
-}
+# if (res["purity_bin"]) {
+#   pr_curve_df <- left_join(sample_level_raw %>% filter(type == 'all'), (ground %>%
+#                              select(c(Tumor_Sample_Barcode, purity)) %>%
+#                              distinct()), by = "Tumor_Sample_Barcode")
+# 
+#   pr_curve_df <- pr_curve_df %>%
+#     filter(statistic_name %in% c("recall", "precision")) %>%
+#     {
+#       if ("Genotyped" %in% names(.))
+#         filter(., Genotyped == "Genotyped") else .
+#     } %>%
+#     select(c(statistic_name, value, Tumor_Sample_Barcode, purity)) %>%
+#     distinct(statistic_name, value, Tumor_Sample_Barcode, purity) %>%
+#     pivot_wider(id_cols = c(Tumor_Sample_Barcode, purity), names_from = statistic_name, values_from = value)
+# 
+#   if (!opt$fillouts) {
+#     if (opt$multiqc) {
+#       png(paste0(opt$mq_dir, "precision_recall_plot_mqc.png"), width = 600)
+#       print(ggplot(pr_curve_df, aes(x = recall, y = precision, color = purity)) + geom_point() + scale_color_gradient() + theme_classic() + theme(axis.text.x = element_text(angle = 45,
+#                                                                                                                                                                              hjust = 1), legend.position = "right", legend.background = element_blank()) + ggtitle("Precision Recall Per Sample") + ylim(0, 1) + xlim(0, 1))
+#       dev.off()
+# 
+#     }
+# 
+# 
+#     pdf(paste0(directory, "images/", out_prefix, "_precision_recall_plot.pdf"))
+# 
+#     ggplot(pr_curve_df, aes(x = recall, y = precision, color = purity)) + geom_point() + scale_color_gradient() + theme_classic() + theme(axis.text.x = element_text(angle = 45,
+#                                                                                                                                                                      hjust = 1), legend.position = "right", legend.background = element_blank()) + ggtitle("Precision Recall Per Sample") + ylim(0, 1) + xlim(0, 1)
+#     dev.off()
+#   }
+# }
 ############################################
 
 ###### If Fillouts, check status of fillouts and wait for completion
