@@ -165,7 +165,7 @@ if (opt$fillout_to_pr) {
   # UTLIZE CALLED VARIANT GREQUENCY BECAUSE THAT IS MORE ACCURATE TO THE BAMS THAN GET BASE COUNTS
   test$t_var_freq <- test$t_var_freq_called_test
 
-  ground$t_var_freq <- test$t_var_freq_called_ground
+  ground$t_var_freq <- ground$t_var_freq_called_ground
 
 }
 ### CHECK FOR ALL REQUIRED FLAGS
